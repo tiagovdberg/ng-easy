@@ -10,7 +10,7 @@
 
 		function HighlightDirectiveLink(scope, element, attrs) {
 			var originalClasses = element.attr("class");
-			scope.$watch(function(){ return Messages.getChangeCount()}, function(newValue, oldValue) {highlightElement();});
+			scope.$watch(function(){ return Messages.getChangeCount();}, function(newValue, oldValue) {highlightElement();});
 			
 			function highlightElement() {
 				element.attr("class", originalClasses);
@@ -23,11 +23,11 @@
 				priorityMap[Messages.MESSAGE] = 4;
 				
 				var elementClass;
-				var priority = Infinity;;
+				var priority = Infinity;
 				highlightExpressions.forEach(function(highlightExpression) {
 					var messages = Messages.getMessages(highlightExpression);
 					messages.forEach(function(message) {
-						var messagePriority = priorityMap[message.type]
+						var messagePriority = priorityMap[message.type];
 						if(messagePriority < priority){
 							priority = messagePriority;
 							elementClass = message.type;

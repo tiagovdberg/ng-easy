@@ -1,5 +1,5 @@
 (function() {
-	const
+	var //const
 		CONTROLLERDEFAULTSUFFIXES = ['Controller', 'Ctrl', 'Ctl'],
 		CONTROLLERSCOPEVARIABLENAMESUFFIX = 'Ctrl',
 		METHODSPREFIX_DEFAULT_SERVICE_PUT = [ 'create', 'update', 'save', 'replace', 'put' ],
@@ -59,7 +59,7 @@
 			if(typeof effectiveConfig.route !== 'undefined') {
 				$routeProvider.when(effectiveConfig.route, controllerRouteConfig);
 			} else {
-				for (statusName in effectiveConfig.status) {
+				for (var statusName in effectiveConfig.status) {
 					if (!effectiveConfig.status.hasOwnProperty(statusName)) {
 						continue;
 					}
@@ -98,7 +98,7 @@
 					effectiveConfig.controller.prototype.data = {};
 				}
 				
-				for (statusName in effectiveConfig.status) {
+				for (var statusName in effectiveConfig.status) {
 					if (!effectiveConfig.status.hasOwnProperty(statusName)) {
 						continue;
 					}
@@ -127,7 +127,7 @@
 			}
 			
 			function injectInexistentStatusMethods() {
-				for (statusName in effectiveConfig.status) {
+				for (var statusName in effectiveConfig.status) {
 					if (!effectiveConfig.status.hasOwnProperty(statusName)) {
 						continue;
 					}
@@ -151,12 +151,12 @@
 			
 			function getModelInjectionMethod() {
 				var self = this;
-				return self.model[self.status]
+				return self.model[self.status];
 			}
 
 			function getDataInjectionMethod() {
 				var self = this;
-				return self.data[self.status]
+				return self.data[self.status];
 			}
 
 			function getTemplateUrlInjectionMethod(effectiveConfig) {
@@ -241,8 +241,7 @@
 	}
 
 	function evalFunctionOrValue(functionOrValue) {
-		if ((typeof functionOrValue === 'function')
-				|| (functionOrValue instanceof Function)) {
+		if ((typeof functionOrValue === 'function') || (functionOrValue instanceof Function)) {
 			return functionOrValue();
 		}
 		return functionOrValue;
@@ -251,7 +250,7 @@
 	function validateModuleNameIsStringAndNotEmpty(moduleName) {
 		var isString = (typeof moduleName === 'string') || (moduleName instanceof String);
 		var isTrimmedString = isString && (moduleName.trim() === moduleName);
-		var isEmpty = isString && moduleName.length == 0;
+		var isEmpty = isString && moduleName.length === 0;
 		if (!isString || !isTrimmedString || isEmpty) {
 			throw '[moduleName] must be a string and must be not empty.';
 		}
@@ -259,7 +258,7 @@
 	
 	function getEffectiveConfig(moduleName, config) {
 		var effectiveConfig = {}; //angular.copy(config);
-		validateControllerNameEvaluationPossible(config)
+		validateControllerNameEvaluationPossible(config);
 		effectiveConfig.controller = getEffectiveController(); 
 		effectiveConfig.controllerName = getEffectiveControllerName();
 		effectiveConfig.controllerAs = getEffectiveControllerScopeVariableName();
@@ -274,10 +273,10 @@
 	
 		function getEffectiveController() {
 			if (typeof config.controller === 'undefined') {
-				var controller = new Function(
-					"var self = this; \n" + 
-					"self.init(); \n"					
-				);
+				var controller = function() {
+					var self = this; 
+					self.init();					
+				};
 				return controller;
 			}
 			return config.controller;
@@ -323,11 +322,11 @@
 			var effectiveStatuses = {};
 			var statusesValue = evalFunctionOrValue(config.status);
 			if (typeof statusesValue === 'undefined') {
-				var statusName = transformControllerNameToFeatureName(effectiveConfig.controllerName);
-				effectiveStatuses[statusName] = getEffectiveStatus(statusName, {});
+				var singleStatusName = transformControllerNameToFeatureName(effectiveConfig.controllerName);
+				effectiveStatuses[singleStatusName] = getEffectiveStatus(singleStatusName, {});
 				return effectiveStatuses;
 			}
-			for (statusName in statusesValue) {
+			for (var statusName in statusesValue) {
 				if (!statusesValue.hasOwnProperty(statusName)) {
 					continue;
 				}
@@ -463,7 +462,7 @@
 		if (typeof statusesValue === 'undefined') {
 			return;
 		}
-		for (statusName in statusesValue) {
+		for (var statusName in statusesValue) {
 			if (!statusesValue.hasOwnProperty(statusName)) {
 				continue;
 			}
@@ -494,9 +493,9 @@
 		var featureNameLength = featureName.length;
 		for (var i = 0; i < featureNameLength; i++) {
 			var char = featureName.charAt(i);
-			var lowerCaseChar = char.toLowerCase()
+			var lowerCaseChar = char.toLowerCase();
 			var isUpperCase = (char != lowerCaseChar);
-			if (isUpperCase && htmlName != '') {
+			if (isUpperCase && (htmlName !== '')) {
 				htmlName += '-';
 			}
 			htmlName += lowerCaseChar;
@@ -509,7 +508,7 @@
 		varName = (typeof statusName === 'undefined') ? 'statusName' : varName;
 		var isString = (typeof statusName === 'string')	|| (statusName instanceof String);
 		var isTrimmedString = isString && (statusName.trim() === statusName);
-		var isEmpty = isString && statusName.length == 0;
+		var isEmpty = isString && (statusName.length === 0);
 		if (!isString || !isTrimmedString || isEmpty) {
 			throw '[' + varName + '] must be a trimmed string and must be not empty.';
 		}

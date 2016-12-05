@@ -12,7 +12,7 @@
 		function HasMessagesDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var originalElementClone = transclude();
 			var dynamicalyAddedElements = [];
-			scope.$watch(function(){ return Messages.getChangeCount()}, function(newValue, oldValue) {doIt();});
+			scope.$watch(function(){ return Messages.getChangeCount();}, function(newValue, oldValue) {doIt();});
 			function doIt() {
 				dynamicalyAddedElements.length = 0;
 				var hasMessagesExpressions = attrs.ngEasyHasMessages.split(';');

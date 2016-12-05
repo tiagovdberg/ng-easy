@@ -11,11 +11,11 @@
   }
 
   function registerOnModule(moduleName) {
-    for (functionName in functions) {
+    for (var functionName in functions) {
       if (!functions.hasOwnProperty(functionName)) {
         continue;
       }
-      angular.module(moduleName)[functionName] = bind(functions[functionName], moduleName) 
+      angular.module(moduleName)[functionName] = bind(functions[functionName], moduleName);
     }
   }
 

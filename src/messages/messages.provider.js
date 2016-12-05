@@ -14,7 +14,7 @@
 		
 		function addMessagesMap(newMessagesMap) {
 			var initialPrefix = '';
-			_addMessagesMapWithPrefix(initialPrefix, newMessagesMap)
+			_addMessagesMapWithPrefix(initialPrefix, newMessagesMap);
 		}
 
 		function _addMessagesMapWithPrefix(prefix, newMessagesMap) {
@@ -23,7 +23,7 @@
 					continue;
 				}
 
-				var prefixedKey = prefix + key 
+				var prefixedKey = prefix + key;
 				
 				if(self.messagesMap[prefixedKey]) {
 					//TODO Throw a error?
@@ -42,7 +42,7 @@
 	}
 	
 	function Messages($rootScope, messagesMap) {
-		const
+		var //const
 			FATAL = 'fatal',
 			ERROR = 'error',
 			WARNING = 'warning', 
@@ -89,22 +89,22 @@
 			for (var messageIndex = 0; messageIndex < self.messages.length; messageIndex++) {
 				var message = self.messages[messageIndex];
 				if(startWildcard && endWildcard) {
-					var substring = expression.substring(1, expression.length - 1);
-					if(message.id && message.id.indexOf(substring) != -1) {
+					var middleSubstring = expression.substring(1, expression.length - 1);
+					if(message.id && message.id.indexOf(middleSubstring) != -1) {
 						returnMessages.push(message);
 					}
 					continue;
 				}
 				if(startWildcard) {
-					var substring = expression.substring(1);
-					if(message.id && message.id.endsWith(substring)) {
+					var starterSubstring = expression.substring(1);
+					if(message.id && message.id.endsWith(starterSubstring)) {
 						returnMessages.push(message);
 					}
 					continue;
 				}
 				if(endWildcard) {
-					var substring = expression.substring(0, expression.length - 1);
-					if(message.id && message.id.startsWith(substring)) {
+					var terminatorSubstring = expression.substring(0, expression.length - 1);
+					if(message.id && message.id.startsWith(terminatorSubstring)) {
 						returnMessages.push(message);
 					}
 					continue;

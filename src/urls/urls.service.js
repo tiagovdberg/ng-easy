@@ -1,6 +1,6 @@
 (function() {
     angular.module('ngEasy')
-        .service('Urls', UrlsService)
+        .service('Urls', UrlsService);
 
     function UrlsService($location) {
         var self = this;
@@ -40,7 +40,7 @@
 
         function angularUrl(url) {
             url = removeImplicitParameters(url);
-            if (url.length == 0) {
+            if (url.length === 0) {
                 return "#" + $location.path();
             }
 
@@ -52,7 +52,7 @@
                 return "#" + url.substring(self.pathUrl.length);
             }
 
-            if (self.baseUrl == null || self.baseUrl.length == 0) {
+            if (typeof self.baseUrl === 'undefined' || self.baseUrl.length === 0) {
                 return "#" + aUrl;
             }
 
@@ -81,7 +81,7 @@
                 }
 
                 if (propertyName == 'url') {
-                    data['angularUrl'] = angularUrl(data[propertyName]);
+                    data.angularUrl = angularUrl(data[propertyName]);
                     continue;
                 }
                 var indexOf = propertyName.indexOf("Url");
@@ -98,8 +98,8 @@
 
         function serviceUrl() {
             var url = self.baseUrl + $location.url();
-            var parameters = $location.search()
-            var firstParameter = (Object.keys(parameters).length == 0);
+            var parameters = $location.search();
+            var firstParameter = (Object.keys(parameters).length === 0);
             var implicitParametersLength = self.implicitParameters.length;
             for (var implicitParameterIndex = 0; implicitParameterIndex < implicitParametersLength; implicitParameterIndex++) {
                 var implicitParameter = self.implicitParameters[implicitParameterIndex];
@@ -149,11 +149,11 @@
                     parameters.splice(i, 1);
                 }
             }
-            if (parameters.length == 0) {
+            if (parameters.length === 0) {
                 return requestUri;
             }
 
-            return requestUri + "?" + parameters.join("&");;
+            return requestUri + "?" + parameters.join("&");
         }
     }
 

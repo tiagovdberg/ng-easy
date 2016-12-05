@@ -12,11 +12,11 @@
 
 		function MessagesDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var dynamicalyAddedElements = [];
-			scope.$watch(function(){ return Messages.getChangeCount()}, function(newValue, oldValue) {doIt();});
+			scope.$watch(function(){ return Messages.getChangeCount();}, function(newValue, oldValue) {doIt();});
 			
 			function doIt() {
 				dynamicalyAddedElements.forEach(function(dynamicalyAddedElement) {
-					dynamicalyAddedElement.remove()
+					dynamicalyAddedElement.remove();
 				});
 				dynamicalyAddedElements.length = 0;
 				var showMessageExpressions = attrs.ngEasyMessages.split(';');
