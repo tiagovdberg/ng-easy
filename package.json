@@ -1,0 +1,27 @@
+{
+  "name": "ng-easy",
+  "version": "0.9.0",
+  "description": "An library to make angular apps smaller to code.",
+  "main": "ng-easy.module.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tiagovdberg/ng-easy.git"
+  },
+  "keywords": [
+    "angular",
+    "ng",
+    "library",
+    "javascript",
+    "js",
+    "ng"
+  ],
+  "author": "Tiago van den Berg",
+  "license": "LGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/tiagovdberg/ng-easy/issues"
+  },
+  "homepage": "https://github.com/tiagovdberg/ng-easy#readme"
+}

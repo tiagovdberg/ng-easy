@@ -1,0 +1,116 @@
+]<!DOCTYPE html>
+<html data-ng-app="app" data-ng-controller="TemplateController as templateCtrl">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta http-equiv="Content-Language" content="pt-br" />
+<meta charset="utf-8" />
+<link rel="stylesheet" type="text/css" href="css/main.css" data-ng-if="templateCtrl.getStyleSheets().length == 0" />
+<link data-ng-repeat="styleSheet in templateCtrl.getStyleSheets()" rel="stylesheet" type="text/css" data-ng-href="{{styleSheet}}" />
+<title>{{templateCtrl.getTitle()}}</title>
+<style type="text/css">
+        [ng\:cloak],
+        [ng-cloak],
+        [data-ng-cloak],
+        [x-ng-cloak],
+        .ng-cloak,
+	.x-ng-cloak {
+	display: none !important;
+}
+</style>
+</head>
+<body>
+	&nbsp;
+	<!-- Magic space. necessary for the body display the background -->
+	<p class="contentshortcut">
+		<a href="#content"> Go to content </a>
+	</p>
+	<header>
+		<section class="logo">
+			<img alt="Logo" src="image/logo.png" />
+			<h1>Processo de Faturamento Automático</h1>
+		</section>
+		<section class="controls" data-ng-if="templateCtrl.isMenuVisible()">
+		</section>
+	</header>
+	<nav class="navigation" data-ng-cloak>
+		<ol>
+			<li>
+				<a href="#/home">Home</a>
+			</li>
+			<li data-ng-repeat="breadCrumb in templateCtrl.getBreadCrumbs()">
+				<a href="{{breadCrumb.url}}" data-ng-if="!$last">
+					<span>{{breadCrumb.text}}</span>
+				</a>
+				<span data-ng-if="$last">{{breadCrumb.text}}</span>
+			</li>
+		</ol>
+	</nav>
+	<aside class="menu" data-ng-if="templateCtrl.isMenuVisible()" data-ng-cloak>
+		<h2>Menu</h2>
+		<ul>
+			<ng:repeat ng-repeat="menu in templateCtrl.getMenus()">
+				<li data-ng-if="templateCtrl.isMenuVisible(menu)">
+					<a href="" data-ng-click="templateCtrl.clickMenu(menu.locationPath);">{{menu.text}}</a>
+				</li>
+			</ng:repeat>
+		</ul>
+	</aside>
+	<div class="content">
+		<div data-ng-show="templateCtrl.isLoading()" class="loading">
+			<p>Carregando...</p>
+		</div>
+		<ng:hide ng-hide="templateCtrl.isLoading()">
+			<h2>Content</h2>
+			<h3 data-ng-cloak>{{templateCtrl.getTitle()}}</h3>
+			<div class="messages" data-ng-easy-has-messages="*" data-ng-cloak>
+				<h4>Messages</h4>
+				<ul>
+					<li class="{{message.type}}" data-ng-easy-messages="*">
+						<span>{{message.text}}</span>
+					</li>
+				</ul>
+			</div>
+			<ng:view></ng:view>
+		</ng:hide>
+	</div>
+	<!-- build:js js/lib.js -->
+	<script type="text/javascript" src="app/lib/angular/angular.min.js"></script>
+	<script type="text/javascript" src="app/lib/angular/angular-route.min.js"></script>
+	<!-- endbuild -->
+	<!-- build:js js/ng-serpro.js -->
+	<script type="text/javascript" src="ng-serpro/ng-serpro.module.js"></script>
+	<script type="text/javascript" src="ng-serpro/alias/alias.directive.js"></script>
+	<script type="text/javascript" src="ng-serpro/template/template.service.js"></script>
+	<script type="text/javascript" src="ng-serpro/template/template.ctrl.js"></script>
+	<script type="text/javascript" src="ng-serpro/template/template.directive.js"></script>
+	<script type="text/javascript" src="ng-serpro/messages/messages.service.js"></script>
+	<script type="text/javascript" src="ng-serpro/messages/messages.directive.js"></script>
+	<script type="text/javascript" src="ng-serpro/messages/highlight.directive.js"></script>
+	<script type="text/javascript" src="ng-serpro/messages/has-messages.directive.js"></script>
+	<script type="text/javascript" src="ng-serpro/urls/urls.service.js"></script>
+	<script type="text/javascript" src="ng-serpro/conventional-controller/conventional-controller.module-function.js"></script>
+
+	<!-- endbuild -->
+	<!-- build:js js/app.js -->
+	<script type="text/javascript" src="app/app.module.js"></script>
+	<script type="text/javascript" src="app/app.route.js"></script>
+	<script type="text/javascript" src="app/home/home.route.js"></script>
+<!--
+	<script type="text/javascript" src="app/authentication/login/login.urlauth.js"></script>
+	<script type="text/javascript" src="app/authentication/login/login.ctrl.js"></script>
+	<script type="text/javascript" src="app/authentication/login/login.messages.js"></script>
+	<script type="text/javascript" src="app/authentication/change-password/change-password.menu.js"></script>
+	<script type="text/javascript" src="app/authentication/change-password/change-password.ctrl.js"></script>
+	<script type="text/javascript" src="app/authentication/change-password/change-password.messages.js"></script>
+	<script type="text/javascript" src="app/authentication/activate-client-access/activate-client-access.ctrl.js"></script>
+	<script type="text/javascript" src="app/authentication/activate-client-access/activate-client-access.urlauth.js"></script>
+	<script type="text/javascript" src="app/authentication/activate-client-access/activate-client-access.messages.js"></script>
+	<script type="text/javascript" src="app/authentication/create-client-access/create-client-access.menu.js"></script>
+	<script type="text/javascript" src="app/authentication/create-client-access/create-client-access.ctrl.js"></script>
+	<script type="text/javascript" src="app/authentication/create-client-access/create-client-access.messages.js"></script>
+-->
+	<script type="text/javascript" src="app/person/person.convctrl.js"></script>
+
+	<script type="text/javascript" data-ng-src="{{script}}" data-ng-repeat="script in templateCtrl.getScripts()"></script>
+</body>
+</html>
