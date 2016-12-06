@@ -1,27 +1,32 @@
 {
-  "name": "ng-easy",
-  "version": "0.0.1",
-  "description": "An library to make angular apps smaller to code.",
-  "main": "src/ng-easy.module.js",
-  "authors": [
-    "Tiago van den Berg"
-  ],
-  "license": "LGPL-3.0",
-  "keywords": [
-    "angular",
-    "ng",
-    "library",
-    "javascript",
-    "js",
-    "ng"
-  ],
-  "homepage": "https://github.com/tiagovdberg/ng-easy",
-  "ignore": [
-    "**/.*",
-    "node_modules",
-    "bower_components",
-    "test",
-    "tests",
-    "build"
-  ]
+	"name": "ng-easy",
+	"version": "0.0.2-0",
+	"description": "An library to make angular apps smaller to code.",
+	"main": "src/ng-easy.module.js",
+	"authors": [
+		"Tiago van den Berg"
+	],
+	"license": "LGPL-3.0",
+	"keywords": [
+		"angular",
+		"ng",
+		"library",
+		"javascript",
+		"js",
+		"ng"
+	],
+	"homepage": "https://github.com/tiagovdberg/ng-easy",
+	"ignore": [
+		"**/.*",
+		"node_modules",
+		"bower_components",
+		"test",
+		"tests",
+		"build",
+		"npm-debug.log"
+	],
+	"dependencies": {
+		"angular": "^1.5.9",
+		"angular-route": "^1.5.9"
+	}
 }

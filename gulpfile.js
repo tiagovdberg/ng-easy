@@ -1,8 +1,9 @@
 var 
 	gulp = require('gulp'),
 	jshint = require('gulp-jshint'),
-	uglify = require('gulp-uglify'),
 	concat = require('gulp-concat'),
+	rename = require('gulp-rename'),
+	uglify = require('gulp-uglify'),
 	yargs = require('yargs'),
 	bump = require('gulp-bump'),
 	fs = require('fs'),
@@ -16,15 +17,11 @@ gulp.task('js', function () {
 	gulp.src(['src/**/*.js', '!**/*.min.js'])
 	.pipe(jshint())
 	.pipe(jshint.reporter('default'))
+	.pipe(concat('ng-easy.js'))
+	.pipe(gulp.dest('dist'))
+	.pipe(rename('ng-easy.min.js'))
 	.pipe(uglify())
-	.pipe(concat('ng-easy.min.js'))
-	.pipe(version({
-		'value' : '%MDS%',
-		'output' : {
-			'file' : 'version.json'
-		}
-	}))
-	.pipe(gulp.dest('build'));
+	.pipe(gulp.dest('dist'));
 });
 
 gulp.task('bump', function () {
@@ -61,10 +58,15 @@ gulp.task('tag', function() {
 	return gulp.src(['package.json']).pipe(tagVersion());
 });
 
+//gulp.task('publish-git',  function() {
+//	return gulp;
+//});
+
+
 gulp.task('publish', ['bump'], function() {
 	var pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'))
 	var args = yargs.argv;
-	return gulp.src(['package.json'])
+	return gulp.src(['.'])
         	.pipe(git.add())
         	.pipe(git.commit(pkg.version + ' - ' +  args.message))
 	        .pipe(tagVersion())
