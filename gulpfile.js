@@ -14,8 +14,8 @@ var
 var
 	mainVersionFile = 'package.json',
 	versionFiles =[mainVersionFile, 'bower.json'],
-	mainVersionFileFilter = filter(mainVersionFile),
-	versionFilesFilter = filter(versionFiles);
+	mainVersionFileFilter = filter(mainVersionFile,{restore : true}),
+	versionFilesFilter = filter(versionFiles, {restore : true});
 
 gulp.task('default', ['build']);
 gulp.task('build', ['js']);
@@ -49,12 +49,12 @@ gulp.task('publish', function() {
 			.pipe(versionFilesFilter)
 			.pipe(bump(bumpOptions))
 			.pipe(gulp.dest('./'))
-			.pipe(versionFilesFilter.restore())
+			.pipe(versionFilesFilter.restore)
 	        	.pipe(git.add())
         		.pipe(git.commit('Release ' + pkg.version))
 			.pipe(mainVersionFileFilter)
 	        	.pipe(tagVersion())
-			.pipe(mainVersionFileFilter.restore())
+			.pipe(mainVersionFileFilter.restore)
 			.on('end', function() {
 				git.push('origin', 'master', {args: '--tags'}, function(err) {
 					if(err) throw (err);
