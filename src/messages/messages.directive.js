@@ -2,8 +2,8 @@
 	angular.module('ngEasy')
 		.directive('ngEasyMessages', MessagesDirective);
 
-	MessagesDirective.$inject = ['Messages', '$compile']; 
-	function MessagesDirective(Messages, $compile) {
+	MessagesDirective.$inject = ['Messages']; 
+	function MessagesDirective(Messages) {
 		return {
 			restrict: 'A',
 		    transclude: 'element',

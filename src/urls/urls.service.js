@@ -2,6 +2,7 @@
     angular.module('ngEasy')
         .service('Urls', UrlsService);
 
+    UrlsService.$inject = ['$location'];
     function UrlsService($location) {
         var self = this;
         var protocolUrl = '';

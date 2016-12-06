@@ -2,7 +2,8 @@
 	angular.module('ngEasy')
 		.directive('ngEasyHasMessages', HasMessagesDirective);
 
-	function HasMessagesDirective(Messages, $compile) {
+	HasMessagesDirective.$inject=['Messages'];
+	function HasMessagesDirective(Messages) {
 		return {
 			restrict: 'A',
 		    transclude: 'element',

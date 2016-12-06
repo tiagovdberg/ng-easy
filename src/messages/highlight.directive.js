@@ -2,6 +2,7 @@
 	angular.module('ngEasy')
 		.directive('ngEasyHighlight', HighlightDirective);
 
+	HighlightDirective.$inject=['Messages'];
 	function HighlightDirective(Messages) {
 		return {
 			restrict : "A",
