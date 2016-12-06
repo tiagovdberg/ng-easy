@@ -314,7 +314,7 @@
 		function getEffectiveTemplateBaseUrl() {
 			return (typeof config.templateBaseUrl !== 'undefined') ? 
 				evalFunctionOrValue(config.templateBaseUrl) : 
-				moduleName + '/' + transformControllerNameToHtmlName(effectiveConfig.controllerName);
+				transformFeatureNameToHtmlName(moduleName) + '/' + transformControllerNameToHtmlName(effectiveConfig.controllerName);
 		}
 		
 		//TODO Route user featurename without prefix. Default Status name with prefix
@@ -377,7 +377,7 @@
 
 		function getEffectiveStatusTemplateUrl(statusName, status) {
 			return (typeof status.templateUrl !== 'undefined')  ?
-				evalFunctionOrValue(status.templateUrl) :
+				evalFunctionOrValue(status.templateUrl) : 
 				'/' + transformStatusNameToHtmlName(statusName) + '.html';
 		}
 		

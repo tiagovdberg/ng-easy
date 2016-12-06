@@ -21,7 +21,7 @@
             self.protocolUrl = $location.protocol();
             self.hostUrl = $location.host();
             self.portUrl = ':' + $location.port();
-            self.pathUrl = $location.path();// 'api';
+            self.pathUrl = $location.path() + 'api';
             self.baseUrl = self.protocolUrl + '://' + self.hostUrl + self.portUrl + self.pathUrl;
             self.implicitParameters = [{ "name": "media-type", "value": "application/json" }];
         }
