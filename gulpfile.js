@@ -1,14 +1,18 @@
 var 
 	gulp = require('gulp'),
-	jshint = require('gulp-jshint'),
-	concat = require('gulp-concat'),
-	rename = require('gulp-rename'),
-	uglify = require('gulp-uglify'),
-	yargs = require('yargs'),
 	bump = require('gulp-bump'),
-	fs = require('fs'),
+	concat = require('gulp-concat'),
+	filter = require('gulp-filter'),
 	git = require('gulp-git'),
-	tagVersion = require('gulp-tag-version');
+	jshint = require('gulp-jshint'),
+	rename = require('gulp-rename'),
+	tagVersion = require('gulp-tag-version'),
+	uglify = require('gulp-uglify'),
+	fs = require('fs'),
+	yargs = require('yargs');
+
+var
+	tagVersionFilter = filter('package.json');
 
 gulp.task('default', ['build']);
 gulp.task('build', ['js']);
@@ -54,15 +58,6 @@ gulp.task('bump', function () {
 		.pipe(gulp.dest('./'));
 });
 
-gulp.task('tag', function() {
-	return gulp.src(['package.json']).pipe(tagVersion());
-});
-
-//gulp.task('publish-git',  function() {
-//	return gulp;
-//});
-
-
 gulp.task('publish', ['bump'], function() {
 	var pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'))
 	var args = yargs.argv;
@@ -71,7 +66,9 @@ gulp.task('publish', ['bump'], function() {
 		return gulp.src(['.'])
 	        	.pipe(git.add())
         		.pipe(git.commit('Release ' + pkg.version))
+			.pipe(tagVersionFilter)
 	        	.pipe(tagVersion())
+			.pipe(tagVersionFilter.restore())
 			.on('end', function() {
 				git.push('origin', 'master', {args: '--tags'}, function(err) {
 					if(err) throw (err);
