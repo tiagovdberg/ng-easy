@@ -12,7 +12,10 @@ var
 	yargs = require('yargs');
 
 var
-	tagVersionFilter = filter('package.json');
+	mainVersionFile = 'package.json',
+	versionFiles =[mainVersionFile, 'bower.json'],
+	mainVersionFileFilter = filter(mainVersionFile),
+	versionFilesFilter = filter(versionFiles);
 
 gulp.task('default', ['build']);
 gulp.task('build', ['js']);
@@ -28,47 +31,30 @@ gulp.task('js', function () {
 	.pipe(gulp.dest('dist'));
 });
 
-gulp.task('bump', function () {
+gulp.task('publish', function() {
 	/// <summary>
-	/// It bumps revisions
 	/// Usage:
-	/// 1. gulp bump : bumps the package.json and bower.json to the next prerelease revision.
-	///   i.e. from 0.1.1-25 to 0.1.1-26
-	/// 2. gulp bump --version 1.1.1 : bumps/sets the package.json and bower.json to the 
-	///	specified revision.
-	/// 3. gulp bump --type major	   : bumps 1.0.0 
-	///	gulp bump --type minor	   : bumps 0.1.0
-	///	gulp bump --type patch	   : bumps 0.0.2
-	///	gulp bump --type prerelease  : bumps 0.0.1-2
+	///     gulp publish --type major          : bumps 1.0.0 
+	///     gulp publish --type minor          : bumps 0.1.0
+	///     gulp publish --type patch          : bumps 0.0.2
+	///     gulp publish --type prerelease     : bumps 0.0.1-2
 	/// </summary>
+	var pkg = JSON.parse(fs.readFileSync(mainVersionFile, 'utf8'))
 	var args = yargs.argv;
 	var type = args.type;
-	var version = args.version;
-	var options = {};
-	if (typeof version !== 'undefined') {
-		options.version = version;
-	} else if(typeof type !== 'undefined') {
-		options.type = type;
-	} else {
-		options.type = 'prerelease';
-	}
-	return gulp
-		.src(['package.json', 'bower.json'])
-		.pipe(bump(options))
-		.pipe(gulp.dest('./'));
-});
-
-gulp.task('publish', ['bump'], function() {
-	var pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'))
-	var args = yargs.argv;
-	var type = args.type;
-	if((typeof type !== 'undefined') && ((type === 'major') || (type === 'minor') || (type === 'patch'))) {
+	if((typeof type !== 'undefined') && ((type === 'major') || (type === 'minor') || (type === 'patch') || (type === 'prerelease'))) {
+		var bumpOptions = {};
+		bumpOptions.type = type;
 		return gulp.src(['.'])
+			.pipe(versionFilesFilter)
+			.pipe(bump(bumpOptions))
+			.pipe(gulp.dest('./'))
+			.pipe(versionFilesFilter.restore())
 	        	.pipe(git.add())
         		.pipe(git.commit('Release ' + pkg.version))
-			.pipe(tagVersionFilter)
+			.pipe(mainVersionFileFilter)
 	        	.pipe(tagVersion())
-			.pipe(tagVersionFilter.restore())
+			.pipe(mainVersionFileFilter.restore())
 			.on('end', function() {
 				git.push('origin', 'master', {args: '--tags'}, function(err) {
 					if(err) throw (err);
