@@ -66,14 +66,28 @@ gulp.task('tag', function() {
 gulp.task('publish', ['bump'], function() {
 	var pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'))
 	var args = yargs.argv;
+	var type = args.type;
+	if((typeof type !== 'undefined') && ((type === 'major') || (type === 'minor') || (type === 'patch'))) {
+		return gulp.src(['.'])
+	        	.pipe(git.add())
+        		.pipe(git.commit('Release ' + pkg.version))
+	        	.pipe(tagVersion())
+			.on('end', function() {
+				git.push('origin', 'master', {args: '--tags'}, function(err) {
+					if(err) throw (err);
+				});
+			});
+	}
+	var commitMessage=args.message;
+	if(typeof commitMessage === 'undefined') {
+		throw 'A commit message is required.';
+	}
 	return gulp.src(['.'])
         	.pipe(git.add())
-        	.pipe(git.commit(pkg.version + ' - ' +  args.message))
-	        .pipe(tagVersion())
+       		.pipe(git.commit(commitMessage))
 		.on('end', function() {
 			git.push('origin', 'master', function(err) {
 				if(err) throw (err);
 			});
-
 		});
 });
