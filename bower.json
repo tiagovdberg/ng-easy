@@ -1,6 +1,6 @@
 {
 	"name": "ng-easy",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"description": "An library to make angular apps smaller to code.",
 	"main": "src/ng-easy.module.js",
 	"authors": [
