@@ -118,7 +118,7 @@
 				}
 
 				if (typeof effectiveConfig.controller.prototype.getData === 'undefined') {
-					effectiveConfig.controller.prototype.getModel = getDataInjectionMethod;
+					effectiveConfig.controller.prototype.getData = getDataInjectionMethod;
 				}
 
 				if (typeof effectiveConfig.controller.prototype.getTemplateUrl === 'undefined') {
@@ -169,7 +169,7 @@
 
 				$injector.get('Messages').clearMessages();
 				
-				if ((typeof form !== 'undefined') && Messages.formErrors(self.getTemplateUrl(), form)) {
+				if ((typeof form !== 'undefined') && $injector.get('Messages').formErrors(self.getTemplateUrl(), form)) {
 					return;
 				}
 
