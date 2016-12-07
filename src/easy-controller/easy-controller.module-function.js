@@ -161,7 +161,7 @@
 
 			function getTemplateUrlInjectionMethod(effectiveConfig) {
 				var self = this;
-				return effectiveConfig.templateBaseUrl + effectiveConfig.status[self.status].templateUrl;
+				return effectiveConfig.templateBaseUrl + evalFunctionOrValue(effectiveConfig.status[self.status].templateUrl);
 			}
 
 			function statusInjectionMethod(effectiveConfig, newStatusName, form) {
@@ -174,43 +174,53 @@
 				}
 
 				var oldStatusName = self.status;
-				self.model[newStatusName] = (typeof oldStatusName !== 'undefined') ? self.model[oldStatusName] : {};
 				self.status = newStatusName;
 
-				if(typeof effectiveConfig.status[newStatusName].serviceMethod === 'undefined') {
+				var serviceMethod = evalFunctionOrValue(effectiveConfig.status[newStatusName].serviceMethod);
+				if(typeof serviceMethod === 'undefined') {
 					return;
 				}
+
+//				//FIXME ????
+//				self.model[newStatusName] = (typeof oldStatusName !== 'undefined') ? self.model[oldStatusName] : {};
 				
 				var serviceUrl = (typeof effectiveConfig.status[newStatusName].serviceUrl !== 'undefined') ? 
-						$injector.get('Urls').getBaseUrl() + effectiveConfig.status[newStatusName].serviceUrl : 
+						$injector.get('Urls').getBaseUrl() + evalFunctionOrValue(effectiveConfig.status[newStatusName].serviceUrl) : 
 						$injector.get('Urls').serviceUrl();
-				var locationOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].locationOnSuccess);
-				var locationOnFail = evalFunctionOrValue(effectiveConfig.status[newStatusName].locationOnFail);
+				//FIXME Move to getEffectiveStatusSuccessFn and getEffectiveStatusFailFn 
 				var successFn = (typeof effectiveConfig.status[newStatusName].success !== 'undefined') ? effectiveConfig.status[newStatusName].success : ServiceSuccessPrototype;  
-				var errorFn = (typeof effectiveConfig.status[newStatusName].error !== 'undefined') ? effectiveConfig.status[newStatusName].error : ServiceFailPrototype;
-				var messageOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].messageOnSuccess);
-				var messageOnFail = evalFunctionOrValue(effectiveConfig.status[newStatusName].messageOnFail);
+				var failFn = (typeof effectiveConfig.status[newStatusName].fail !== 'undefined') ? effectiveConfig.status[newStatusName].fail : ServiceFailPrototype;
 				
 				$injector.get('Template').showLoading();
 				$injector.get('$http')({
-					method: effectiveConfig.status[newStatusName].serviceMethod,
-					data: self.getModel(),
+					method: serviceMethod,
+					data: self.model[oldStatusName],
 					url: serviceUrl
 				}).then(
 					successFn, 
-					errorFn
+					failFn
 				).finally($injector.get('Template').hideLoading);
 
 				//TODO model and data must accept functions with response as argument.
 				function ServiceSuccessPrototype(response) {
+					var statusOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].statusOnSuccess);
 					self.data[statusOnSuccess] = response.data;
-					if(statusOnSuccess != newStatusName) {
+
+					
+					var modelOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].modelOnSuccess);
+					if(typeof modelOnSuccess !== 'undefined') {
+						self.model[statusOnSuccess] = modelOnSuccess;
+					}
+
+					var statusChanged = (statusOnSuccess !== newStatusName);
+					if(statusChanged) {
 						self[statusOnSuccess]();
 					}
-					self.model[statusOnSuccess] = {};
+					var locationOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].locationOnSuccess);
 					if(typeof locationOnSuccess !== 'undefined') {
 						$injector.get('$location').url(locationOnSuccess);
 					}
+					var messageOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].messageOnSuccess);
 					if(messageOnSuccess) {
 						if(typeof locationOnSuccess !== 'undefined') {
 							messageOnSuccess.persistent = true;
@@ -220,18 +230,25 @@
 				}
 				
 				function ServiceFailPrototype(response) {
-					if(typeof statusOnFail !== 'undefined') {
-						if((statusOnFail !== oldStatusName) && (statusOnFail !== newStatusName)) {
-							self[statusOnFail]();
-						} else {
-							self.status = statusOnFail;
-						}
+					var statusOnFail = evalFunctionOrValue(effectiveConfig.status[newStatusName].statusOnFail);
+
+					var modelOnFail = evalFunctionOrValue(effectiveConfig.status[newStatusName].modelOnFail);
+					if(typeof modelOnFail !== 'undefined') {
+						self.model[statusOnFail] = modelOnFail;
 					}
+
+					if((statusOnFail !== oldStatusName) && (statusOnFail !== newStatusName)) {
+						self[statusOnFail]();
+					} else {
+						self.status = statusOnFail;
+					}
+					var locationOnFail = evalFunctionOrValue(effectiveConfig.status[newStatusName].locationOnFail);
 					var hasLocationOnFail = (typeof locationOnFail !== 'undefined');
 					if(response.status != 401 && hasLocationOnFail) {
 						$injector.get('$location').url(locationOnFail);
 					}
-					$injector.get('Messages').handleErrors(response, hasLocationOnFail);
+					$injector.get('Messages').handleErrors(response);
+					var messageOnFail = evalFunctionOrValue(effectiveConfig.status[newStatusName].messageOnFail);
 					if(messageOnFail) {
 						$injector.get('Messages').addMessage(messageOnFail);
 					}
@@ -257,7 +274,7 @@
 	}
 	
 	function getEffectiveConfig(moduleName, config) {
-		var effectiveConfig = {}; //angular.copy(config);
+		var effectiveConfig = {};
 		validateControllerNameEvaluationPossible(config);
 		effectiveConfig.controller = getEffectiveController(); 
 		effectiveConfig.controllerName = getEffectiveControllerName();
@@ -358,6 +375,8 @@
 			effectiveStatus.serviceUrl = getEffectiveStatusServiceUrl(statusName, status); 
 			effectiveStatus.statusOnSuccess = getEffectiveStatusStatusOnSuccess(statusName, status);
 			effectiveStatus.statusOnFail = getEffectiveStatusStatusOnFail(statusName, status);
+			effectiveStatus.modelOnSuccess = getEffectiveStatusModelOnSuccess(statusName, status);
+			effectiveStatus.modelOnFail = getEffectiveStatusModelOnFail(statusName, status);
 			effectiveStatus.locationOnSuccess = getEffectiveStatusLocationOnSuccess(statusName, status);
 			effectiveStatus.locationOnFail = getEffectiveStatusLocationOnFail(statusName, status);
 			effectiveStatus.messageOnSuccess = getEffectiveStatusMessageOnSuccess(statusName, status);
@@ -377,13 +396,13 @@
 
 		function getEffectiveStatusTemplateUrl(statusName, status) {
 			return (typeof status.templateUrl !== 'undefined')  ?
-				evalFunctionOrValue(status.templateUrl) : 
+				status.templateUrl : 
 				'/' + transformStatusNameToHtmlName(statusName) + '.html';
 		}
 		
 		function getEffectiveStatusServiceMethod(statusName, status) {
 			if(typeof status.serviceMethod !== 'undefined') {
-				return evalFunctionOrValue(status.serviceMethod);
+				return status.serviceMethod;
 			}
 			
 			if(containsStartString(METHODSPREFIX_DEFAULT_SERVICE_PUT, statusName)) {
@@ -407,31 +426,43 @@
 		}
 		
 		function getEffectiveStatusServiceUrl(statusName, status) {
-			return evalFunctionOrValue(status.serviceUrl);
+			return status.serviceUrl;
 		}
 		
 		function getEffectiveStatusStatusOnSuccess(statusName, status) {
-			return evalFunctionOrValue(status.statusOnSuccess);
+			return (typeof status.statusOnSuccess !== 'undefined') ?
+				status.statusOnSuccess :
+				statusName;
 		}
 
 		function getEffectiveStatusStatusOnFail(statusName, status) {
-			return evalFunctionOrValue(status.statusOnFail);
+			return (typeof status.statusOnFail !== 'undefined') ?
+				status.statusOnFail :
+				statusName;
+		}
+
+		function getEffectiveStatusModelOnSuccess(statusName, status) {
+			return status.modelOnSuccess;
+		}
+
+		function getEffectiveStatusModelOnFail(statusName, status) {
+			return status.modelOnFail;
 		}
 
 		function getEffectiveStatusLocationOnSuccess(statusName, status) {
-			return evalFunctionOrValue(status.locationOnSuccess);
+			return status.locationOnSuccess;
 		}
 
 		function getEffectiveStatusLocationOnFail(statusName, status) {
-			return evalFunctionOrValue(status.locationOnFail);
+			return status.locationOnFail;
 		}
 
 		function getEffectiveStatusMessageOnSuccess(statusName, status) {
-			return evalFunctionOrValue(status.messageOnSuccess);
+			return status.messageOnSuccess;
 		}
 
 		function getEffectiveStatusMessageOnFail(statusName, status) {
-			return evalFunctionOrValue(status.messageOnFail);
+			return status.messageOnFail;
 		}
 	}
 
