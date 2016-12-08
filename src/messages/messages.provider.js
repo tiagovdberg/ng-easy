@@ -140,7 +140,6 @@
 		}
 		
 		function handleErrors(response) {
-//			clearMessages();
 			var type = MESSAGE; 
 
 			if(response.status < 200 || response.status >= 600) {
@@ -164,15 +163,17 @@
 		}
 
 		function formErrors(templateUrl, form) {
-//			clearMessages();
 			var hasError = false;
-			for(var field in form) {
-				if(!form.hasOwnProperty(field) || field.startsWith("$")) {
+			for(var fieldName in form) {
+				if(!form.hasOwnProperty(fieldName)) {
 					continue;
 				}
-				for(var formFieldError in form[field].$error) {
+				if(fieldName.startsWith("$")) {
+					continue;
+				}
+				for(var formFieldError in form[fieldName].$error) {
 					hasError = true;
-					var qualifiedError = templateUrl + "." + form.$name + "." + field + "." + formFieldError;
+					var qualifiedError = templateUrl + "." + form.$name + "." + fieldName + "." + formFieldError;
 					var noParametersQualifiedError = qualifiedError.replace(/\{.*?=.*?\}/, '{}');
 					if(typeof self.messagesMap[noParametersQualifiedError] === 'undefined') {
 						addMessage({"id": qualifiedError ,"text": qualifiedError, "type": "error"});
@@ -193,6 +194,20 @@
 						changedMessage = changedMessage.replace("\{" + paramName + "\}", paramValue);
 					}
 					addMessage({"id": qualifiedError ,"text": changedMessage, "type": "error"});
+				}
+			}
+			errorTypeLoop:
+			for(var errorTypeName in form.$error) {
+				var errorType = form.$error[errorTypeName];
+				for(var fieldIndex = 0; fieldIndex < errorType.length; fieldIndex++) {
+					var field = errorType[fieldIndex];
+					if((typeof field.$name !== 'undefined') && field.$name !== "") {
+						continue;
+					}
+					hasError = true;
+					var qualifiedGenericError = templateUrl + "." + form.$name + ".$error." + errorTypeName;
+					addMessage({"id": qualifiedGenericError ,"text": qualifiedGenericError, "type": "error"});
+					continue errorTypeLoop;
 				}
 			}
 			return hasError;
