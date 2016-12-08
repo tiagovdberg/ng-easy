@@ -83,39 +83,7 @@
 				return self.messages;
 			}
 			
-			var returnMessages = [];
-			var startWildcard = expression.startsWith("*");
-			var endWildcard = expression.endsWith("*");
-			for (var messageIndex = 0; messageIndex < self.messages.length; messageIndex++) {
-				var message = self.messages[messageIndex];
-				if(startWildcard && endWildcard) {
-					var middleSubstring = expression.substring(1, expression.length - 1);
-					if(message.id && message.id.indexOf(middleSubstring) != -1) {
-						returnMessages.push(message);
-					}
-					continue;
-				}
-				if(startWildcard) {
-					var starterSubstring = expression.substring(1);
-					if(message.id && message.id.endsWith(starterSubstring)) {
-						returnMessages.push(message);
-					}
-					continue;
-				}
-				if(endWildcard) {
-					var terminatorSubstring = expression.substring(0, expression.length - 1);
-					if(message.id && message.id.startsWith(terminatorSubstring)) {
-						returnMessages.push(message);
-					}
-					continue;
-				}
-
-				if(message.id == expression) {
-					returnMessages.push(message);
-					continue;
-				}
-			}
-			return returnMessages;
+			return angular.easy.$$filterElements(self.messages, expression, function(message) { return message.id; });
 		}
 
 		function setMessages(newMessages) {
@@ -168,6 +136,24 @@
 				if(!form.hasOwnProperty(fieldName)) {
 					continue;
 				}
+				if(fieldName === '$error') {
+					errorTypeLoop:
+					for(var errorTypeName in form.$error) {
+						var errorType = form.$error[errorTypeName];
+						for(var fieldIndex = 0; fieldIndex < errorType.length; fieldIndex++) {
+							var field = errorType[fieldIndex];
+							if((typeof field.$name !== 'undefined') && field.$name !== "") {
+								continue;
+							}
+							hasError = true;
+							var qualifiedGenericError = templateUrl + "." + form.$name + ".$error." + errorTypeName;
+							addMessage({"id": qualifiedGenericError ,"text": qualifiedGenericError, "type": "error"});
+							continue errorTypeLoop;
+						}
+					}
+					continue;
+				}
+
 				if(fieldName.startsWith("$")) {
 					continue;
 				}
@@ -194,20 +180,6 @@
 						changedMessage = changedMessage.replace("\{" + paramName + "\}", paramValue);
 					}
 					addMessage({"id": qualifiedError ,"text": changedMessage, "type": "error"});
-				}
-			}
-			errorTypeLoop:
-			for(var errorTypeName in form.$error) {
-				var errorType = form.$error[errorTypeName];
-				for(var fieldIndex = 0; fieldIndex < errorType.length; fieldIndex++) {
-					var field = errorType[fieldIndex];
-					if((typeof field.$name !== 'undefined') && field.$name !== "") {
-						continue;
-					}
-					hasError = true;
-					var qualifiedGenericError = templateUrl + "." + form.$name + ".$error." + errorTypeName;
-					addMessage({"id": qualifiedGenericError ,"text": qualifiedGenericError, "type": "error"});
-					continue errorTypeLoop;
 				}
 			}
 			return hasError;

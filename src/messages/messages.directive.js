@@ -5,16 +5,16 @@
 	MessagesDirective.$inject = ['Messages']; 
 	function MessagesDirective(Messages) {
 		return {
-			restrict: 'A',
+			restrict: 'EA',
 		    transclude: 'element',
 			link : MessagesDirectiveLink
 		};
 
 		function MessagesDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var dynamicalyAddedElements = [];
-			scope.$watch(function(){ return Messages.getChangeCount();}, function(newValue, oldValue) {doIt();});
+			scope.$watch(function(){ return Messages.getChangeCount();}, processElements);
 			
-			function doIt() {
+			function processElements() {
 				dynamicalyAddedElements.forEach(function(dynamicalyAddedElement) {
 					dynamicalyAddedElement.remove();
 				});
@@ -24,8 +24,6 @@
 					var messages = Messages.getMessages(showMessageExpression);
 					messages.forEach(function(message) {
 						var originalElementClone = transclude(function(clone, transcludeScope) {transcludeScope.message = message;});
-//						originalElementClone.removeAttr('ngEasy-messages');
-//						originalElementClone.removeAttr('data-ngEasy-messages');
 						dynamicalyAddedElements.push(originalElementClone);
 						element.after(originalElementClone);
 					});

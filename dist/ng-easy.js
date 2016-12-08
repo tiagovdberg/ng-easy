@@ -650,17 +650,15 @@
 	HasMessagesDirective.$inject=['Messages'];
 	function HasMessagesDirective(Messages) {
 		return {
-			restrict: 'A',
+			restrict: 'EA',
 		    transclude: 'element',
 			link : HasMessagesDirectiveLink
 		};
 
 		function HasMessagesDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var originalElementClone = transclude();
-			var dynamicalyAddedElements = [];
-			scope.$watch(function(){ return Messages.getChangeCount();}, function(newValue, oldValue) {doIt();});
-			function doIt() {
-				dynamicalyAddedElements.length = 0;
+			scope.$watch(function(){ return Messages.getChangeCount();}, processElement);
+			function processElement() {
 				var hasMessagesExpressions = attrs.ngEasyHasMessages.split(';');
 				var hasMessages = false;
 				hasMessagesExpressions.forEach(function(showMessageExpression) {
@@ -691,7 +689,7 @@
 
 		function HighlightDirectiveLink(scope, element, attrs) {
 			var originalClasses = element.attr("class");
-			scope.$watch(function(){ return Messages.getChangeCount();}, function(newValue, oldValue) {highlightElement();});
+			scope.$watch(function(){ return Messages.getChangeCount();}, highlightElement);
 			
 			function highlightElement() {
 				element.attr("class", originalClasses);
@@ -730,16 +728,16 @@
 	MessagesDirective.$inject = ['Messages']; 
 	function MessagesDirective(Messages) {
 		return {
-			restrict: 'A',
+			restrict: 'EA',
 		    transclude: 'element',
 			link : MessagesDirectiveLink
 		};
 
 		function MessagesDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var dynamicalyAddedElements = [];
-			scope.$watch(function(){ return Messages.getChangeCount();}, function(newValue, oldValue) {doIt();});
+			scope.$watch(function(){ return Messages.getChangeCount();}, processElements);
 			
-			function doIt() {
+			function processElements() {
 				dynamicalyAddedElements.forEach(function(dynamicalyAddedElement) {
 					dynamicalyAddedElement.remove();
 				});
@@ -749,8 +747,6 @@
 					var messages = Messages.getMessages(showMessageExpression);
 					messages.forEach(function(message) {
 						var originalElementClone = transclude(function(clone, transcludeScope) {transcludeScope.message = message;});
-//						originalElementClone.removeAttr('ngEasy-messages');
-//						originalElementClone.removeAttr('data-ngEasy-messages');
 						dynamicalyAddedElements.push(originalElementClone);
 						element.after(originalElementClone);
 					});
@@ -845,39 +841,7 @@
 				return self.messages;
 			}
 			
-			var returnMessages = [];
-			var startWildcard = expression.startsWith("*");
-			var endWildcard = expression.endsWith("*");
-			for (var messageIndex = 0; messageIndex < self.messages.length; messageIndex++) {
-				var message = self.messages[messageIndex];
-				if(startWildcard && endWildcard) {
-					var middleSubstring = expression.substring(1, expression.length - 1);
-					if(message.id && message.id.indexOf(middleSubstring) != -1) {
-						returnMessages.push(message);
-					}
-					continue;
-				}
-				if(startWildcard) {
-					var starterSubstring = expression.substring(1);
-					if(message.id && message.id.endsWith(starterSubstring)) {
-						returnMessages.push(message);
-					}
-					continue;
-				}
-				if(endWildcard) {
-					var terminatorSubstring = expression.substring(0, expression.length - 1);
-					if(message.id && message.id.startsWith(terminatorSubstring)) {
-						returnMessages.push(message);
-					}
-					continue;
-				}
-
-				if(message.id == expression) {
-					returnMessages.push(message);
-					continue;
-				}
-			}
-			return returnMessages;
+			return angular.easy.$$filterElements(self.messages, expression, function(message) { return message.id; });
 		}
 
 		function setMessages(newMessages) {
@@ -930,6 +894,24 @@
 				if(!form.hasOwnProperty(fieldName)) {
 					continue;
 				}
+				if(fieldName === '$error') {
+					errorTypeLoop:
+					for(var errorTypeName in form.$error) {
+						var errorType = form.$error[errorTypeName];
+						for(var fieldIndex = 0; fieldIndex < errorType.length; fieldIndex++) {
+							var field = errorType[fieldIndex];
+							if((typeof field.$name !== 'undefined') && field.$name !== "") {
+								continue;
+							}
+							hasError = true;
+							var qualifiedGenericError = templateUrl + "." + form.$name + ".$error." + errorTypeName;
+							addMessage({"id": qualifiedGenericError ,"text": qualifiedGenericError, "type": "error"});
+							continue errorTypeLoop;
+						}
+					}
+					continue;
+				}
+
 				if(fieldName.startsWith("$")) {
 					continue;
 				}
@@ -958,184 +940,101 @@
 					addMessage({"id": qualifiedError ,"text": changedMessage, "type": "error"});
 				}
 			}
-			errorTypeLoop:
-			for(var errorTypeName in form.$error) {
-				var errorType = form.$error[errorTypeName];
-				for(var fieldIndex = 0; fieldIndex < errorType.length; fieldIndex++) {
-					var field = errorType[fieldIndex];
-					if((typeof field.$name !== 'undefined') && field.$name !== "") {
-						continue;
-					}
-					hasError = true;
-					var qualifiedGenericError = templateUrl + "." + form.$name + ".$error." + errorTypeName;
-					addMessage({"id": qualifiedGenericError ,"text": qualifiedGenericError, "type": "error"});
-					continue errorTypeLoop;
-				}
-			}
 			return hasError;
 		}
 	}
 })();	
 (function() {
-    angular.module('ngEasy')
-        .service('Urls', UrlsService);
+	angular.module('ngEasy')
+		.directive('ngEasyBreadCrumbs', BreadCrumbsDirective);
 
-    UrlsService.$inject = ['$location'];
-    function UrlsService($location) {
-        var self = this;
-        var protocolUrl = '';
-        var hostUrl = '';
-        var portUrl = '';
-        var pathUrl = '';
-        var baseUrl = '';
-        var implicitParameters;
-        this.getBaseUrl = getBaseUrl;
-        this.setBaseUrl = setBaseUrl;
-        this.angularUrl = angularUrl;
-        this.injectAngularUrls = injectAngularUrls;
-        this.serviceUrl = serviceUrl;
-        init();
+	BreadCrumbsDirective.$inject = ['Template']; 
+	function BreadCrumbsDirective(Template) {
+		return {
+			restrict: 'EA',
+		    transclude: 'element',
+			link : BreadCrumbsDirectiveLink
+		};
 
-        function init() {
-            self.protocolUrl = $location.protocol();
-            self.hostUrl = $location.host();
-            self.portUrl = ':' + $location.port();
-            self.pathUrl = '/api';
-            self.baseUrl = self.protocolUrl + '://' + self.hostUrl + self.portUrl + self.pathUrl;
-            self.implicitParameters = [{ "name": "media-type", "value": "application/json" }];
-        }
+		function BreadCrumbsDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			var dynamicalyAddedElements = [];
+			scope.$watch(function(){ return Template.isMenuVisible();}, processElements);
+			
+			function processElements() {
+				dynamicalyAddedElements.forEach(function(dynamicalyAddedElement) {
+					dynamicalyAddedElement.remove();
+				});
+				dynamicalyAddedElements.length = 0;
+				var breadCrumbs = Template.getBreadCrumbs();
+				breadCrumbs.forEach(function(breadCrumb) {
+					var originalElementClone = transclude(function(clone, transcludeScope) {transcludeScope.breadCrumb = breadCrumb;});
+					dynamicalyAddedElements.push(originalElementClone);
+					element.after(originalElementClone);
+				});
+			}
+		}
+	}
+		
+})();
+(function() {
+	angular.module('ngEasy')
+		.directive('ngEasyHasMenu', HasMenuDirective);
 
-        function getBaseUrl() {
-            return self.baseUrl;
-        }
-        
-        function setBaseUrl(newBaseUrl) {
-        	self.baseUrl = newBaseUrl;
-        }
+	HasMenuDirective.$inject=['Template'];
+	function HasMenuDirective(Template) {
+		return {
+			restrict: 'EA',
+		    transclude: 'element',
+			link : HasMenuDirectiveLink
+		};
 
-        function addImplicitParameter(parameterName, parameterValue) {
-            self.implicitParameters.push({ "name": parameterName, "value": parameterValue });
-        }
+		function HasMenuDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			var originalElementClone = transclude();
+			scope.$watch(function(){ return Template.isMenuVisible();}, processElement);
+			
+			function processElement() {
+				if(Template.isMenuVisible()) {
+					element.after(originalElementClone);
+					return;
+				}
+				originalElementClone.remove();
+				return;
+			}
+		}
+	}
+		
+})();
+(function() {
+	angular.module('ngEasy')
+		.directive('ngEasyMenus', MenusDirective);
 
-        function angularUrl(url) {
-            url = removeImplicitParameters(url);
-            if (url.length === 0) {
-                return "#" + $location.path();
-            }
+	MenusDirective.$inject = ['Template']; 
+	function MenuDirective(Template) {
+		return {
+			restrict: 'EA',
+		    transclude: 'element',
+			link : MenusDirectiveLink
+		};
 
-            if (url.startsWith("?")) {
-                return "#" + $location.path() + url;
-            }
-
-            if (url.startsWith("/") && url.startsWith(self.pathUrl)) {
-                return "#" + url.substring(self.pathUrl.length);
-            }
-
-            if (typeof self.baseUrl === 'undefined' || self.baseUrl.length === 0) {
-                return "#" + aUrl;
-            }
-
-            if (url.startsWith(self.baseUrl)) {
-                return "#" + url.substring(self.baseUrl.length);
-            }
-
-            return url;
-        }
-
-        function injectAngularUrls(data) {
-            if (Array.isArray(data)) {
-                var arrayLength = data.length;
-                for (var i = 0; i < arrayLength; i++) {
-                    injectAngularUrls(data[i]);
-                }
-                return;
-            }
-            for (var propertyName in data) {
-                if (!data.hasOwnProperty(propertyName)) {
-                    continue;
-                }
-                if (typeof data[propertyName] == "object") {
-                    injectAngularUrls(data[propertyName]);
-                    continue;
-                }
-
-                if (propertyName == 'url') {
-                    data.angularUrl = angularUrl(data[propertyName]);
-                    continue;
-                }
-                var indexOf = propertyName.indexOf("Url");
-                if (indexOf == -1) {
-                    continue;
-                }
-                var angularUrlPropertyName =
-                    propertyName.substring(0, indexOf) +
-                    "AngularUrl" +
-                    propertyName.substring(indexOf + 3);
-                data[angularUrlPropertyName] = angularUrl(data[propertyName]);
-            }
-        }
-
-        function serviceUrl() {
-            var url = self.baseUrl + $location.url();
-            var parameters = $location.search();
-            var firstParameter = (Object.keys(parameters).length === 0);
-            var implicitParametersLength = self.implicitParameters.length;
-            for (var implicitParameterIndex = 0; implicitParameterIndex < implicitParametersLength; implicitParameterIndex++) {
-                var implicitParameter = self.implicitParameters[implicitParameterIndex];
-                var implicitParameterName = implicitParameter.name;
-                var implicitParameterValue = implicitParameter.value;
-                if (parameters[implicitParameterName]) {
-                    continue;
-                }
-                if (firstParameter) {
-                    url += "?";
-                    firstParameter = false;
-                } else {
-                    url += "&";
-                }
-                url += implicitParameterName + "=" + implicitParameterValue;
-            }
-            return url;
-        }
-
-        function removeImplicitParameters(url) {
-            var implicitParametersLength = self.implicitParameters.length;
-            for (var implicitParameterIndex = 0; implicitParameterIndex < implicitParametersLength; implicitParameterIndex++) {
-                var implicitParameter = self.implicitParameters[implicitParameterIndex];
-                url = removeParameter(url, implicitParameter.name, implicitParameter.value);
-            }
-            return url;
-        }
-
-        function removeParameter(url, parameterNameToRemove, parameterValueToRemove) {
-            if (url.indexOf("?") == -1) {
-                return url;
-            }
-            var splitedUrl = url.split("?");
-            var requestUri = splitedUrl[0];
-            var queryString = splitedUrl[1];
-            var parameters = queryString.split("&");
-            for (var i = parameters.length - 1; i >= 0; i -= 1) {
-                var parameterNameAndValue = parameters[i].split("=");
-                var parameterName = parameterNameAndValue[0];
-                var parameterValue = parameterNameAndValue[1];
-                if (
-                    (parameterName == parameterNameToRemove) &&
-                    (!(parameterValueToRemove) ||
-                        (parameterValueToRemove == parameterValue)
-                    )
-                ) {
-                    parameters.splice(i, 1);
-                }
-            }
-            if (parameters.length === 0) {
-                return requestUri;
-            }
-
-            return requestUri + "?" + parameters.join("&");
-        }
-    }
-
+		function MenusDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			var dynamicalyAddedElements = [];
+			scope.$watch(function(){ return Template.isMenuVisible();}, processElements);
+			
+			function processElements() {
+				dynamicalyAddedElements.forEach(function(dynamicalyAddedElement) {
+					dynamicalyAddedElement.remove();
+				});
+				dynamicalyAddedElements.length = 0;
+				var menus = Template.getMenus();
+				menus.forEach(function(menu) {
+					var originalElementClone = transclude(function(clone, transcludeScope) {transcludeScope.menu = menu;});
+					dynamicalyAddedElements.push(originalElementClone);
+					element.after(originalElementClone);
+				});
+			}
+		}
+	}
+		
 })();
 (function() {
 	angular.module('ngEasy')
@@ -1315,3 +1214,233 @@
 		}
 	}
 })();	
+(function() {
+	angular.module('ngEasy')
+		.directive('ngEasyUncloak', UncloakDirective);
+
+	function UncloakDirective() {
+		return {
+			restrict: 'A',
+		    compile: UncloakCompile
+		};
+
+		function UncloakCompile(element, attrs) {
+			element.remove();
+		}
+	}
+})();
+(function() {
+    angular.module('ngEasy')
+        .service('Urls', UrlsService);
+
+    UrlsService.$inject = ['$location'];
+    function UrlsService($location) {
+        var self = this;
+        var protocolUrl = '';
+        var hostUrl = '';
+        var portUrl = '';
+        var pathUrl = '';
+        var baseUrl = '';
+        var implicitParameters;
+        this.getBaseUrl = getBaseUrl;
+        this.setBaseUrl = setBaseUrl;
+        this.angularUrl = angularUrl;
+        this.injectAngularUrls = injectAngularUrls;
+        this.serviceUrl = serviceUrl;
+        init();
+
+        function init() {
+            self.protocolUrl = $location.protocol();
+            self.hostUrl = $location.host();
+            self.portUrl = ':' + $location.port();
+            self.pathUrl = '/api';
+            self.baseUrl = self.protocolUrl + '://' + self.hostUrl + self.portUrl + self.pathUrl;
+            self.implicitParameters = [{ "name": "media-type", "value": "application/json" }];
+        }
+
+        function getBaseUrl() {
+            return self.baseUrl;
+        }
+        
+        function setBaseUrl(newBaseUrl) {
+        	self.baseUrl = newBaseUrl;
+        }
+
+        function addImplicitParameter(parameterName, parameterValue) {
+            self.implicitParameters.push({ "name": parameterName, "value": parameterValue });
+        }
+
+        function angularUrl(url) {
+            url = removeImplicitParameters(url);
+            if (url.length === 0) {
+                return "#" + $location.path();
+            }
+
+            if (url.startsWith("?")) {
+                return "#" + $location.path() + url;
+            }
+
+            if (url.startsWith("/") && url.startsWith(self.pathUrl)) {
+                return "#" + url.substring(self.pathUrl.length);
+            }
+
+            if (typeof self.baseUrl === 'undefined' || self.baseUrl.length === 0) {
+                return "#" + aUrl;
+            }
+
+            if (url.startsWith(self.baseUrl)) {
+                return "#" + url.substring(self.baseUrl.length);
+            }
+
+            return url;
+        }
+
+        function injectAngularUrls(data) {
+            if (Array.isArray(data)) {
+                var arrayLength = data.length;
+                for (var i = 0; i < arrayLength; i++) {
+                    injectAngularUrls(data[i]);
+                }
+                return;
+            }
+            for (var propertyName in data) {
+                if (!data.hasOwnProperty(propertyName)) {
+                    continue;
+                }
+                if (typeof data[propertyName] == "object") {
+                    injectAngularUrls(data[propertyName]);
+                    continue;
+                }
+
+                if (propertyName == 'url') {
+                    data.angularUrl = angularUrl(data[propertyName]);
+                    continue;
+                }
+                var indexOf = propertyName.indexOf("Url");
+                if (indexOf == -1) {
+                    continue;
+                }
+                var angularUrlPropertyName =
+                    propertyName.substring(0, indexOf) +
+                    "AngularUrl" +
+                    propertyName.substring(indexOf + 3);
+                data[angularUrlPropertyName] = angularUrl(data[propertyName]);
+            }
+        }
+
+        function serviceUrl() {
+            var url = self.baseUrl + $location.url();
+            var parameters = $location.search();
+            var firstParameter = (Object.keys(parameters).length === 0);
+            var implicitParametersLength = self.implicitParameters.length;
+            for (var implicitParameterIndex = 0; implicitParameterIndex < implicitParametersLength; implicitParameterIndex++) {
+                var implicitParameter = self.implicitParameters[implicitParameterIndex];
+                var implicitParameterName = implicitParameter.name;
+                var implicitParameterValue = implicitParameter.value;
+                if (parameters[implicitParameterName]) {
+                    continue;
+                }
+                if (firstParameter) {
+                    url += "?";
+                    firstParameter = false;
+                } else {
+                    url += "&";
+                }
+                url += implicitParameterName + "=" + implicitParameterValue;
+            }
+            return url;
+        }
+
+        function removeImplicitParameters(url) {
+            var implicitParametersLength = self.implicitParameters.length;
+            for (var implicitParameterIndex = 0; implicitParameterIndex < implicitParametersLength; implicitParameterIndex++) {
+                var implicitParameter = self.implicitParameters[implicitParameterIndex];
+                url = removeParameter(url, implicitParameter.name, implicitParameter.value);
+            }
+            return url;
+        }
+
+        function removeParameter(url, parameterNameToRemove, parameterValueToRemove) {
+            if (url.indexOf("?") == -1) {
+                return url;
+            }
+            var splitedUrl = url.split("?");
+            var requestUri = splitedUrl[0];
+            var queryString = splitedUrl[1];
+            var parameters = queryString.split("&");
+            for (var i = parameters.length - 1; i >= 0; i -= 1) {
+                var parameterNameAndValue = parameters[i].split("=");
+                var parameterName = parameterNameAndValue[0];
+                var parameterValue = parameterNameAndValue[1];
+                if (
+                    (parameterName == parameterNameToRemove) &&
+                    (!(parameterValueToRemove) ||
+                        (parameterValueToRemove == parameterValue)
+                    )
+                ) {
+                    parameters.splice(i, 1);
+                }
+            }
+            if (parameters.length === 0) {
+                return requestUri;
+            }
+
+            return requestUri + "?" + parameters.join("&");
+        }
+    }
+
+})();
+(function() {
+    angular.easy.$$filterElements = filterElements;
+
+    function filterElements(elements, expression, strExtractorFn) {
+        if(!expression || expression == "*") {
+            return elements;
+        }
+        
+        var returnElements = [];
+        var startWildcard = expression.startsWith("*");
+        var endWildcard = expression.endsWith("*");
+        for (var elementIndex = 0; elementIndex < elements.length; elementIndex++) {
+            var element = elements[elementIndex];
+            var str = strExtractorFn(element);
+            if(typeof strExtractorFn !== 'undefined') {
+                str = strExtractorFn(element);
+            } else {
+                str = element;
+            }
+
+            if(typeof str !== 'string') {
+                continue;
+            }
+
+            if(startWildcard && endWildcard) {
+                var middleSubstring = expression.substring(1, expression.length - 1);
+                if(str.indexOf(middleSubstring) !== -1) {
+                    returnElements.push(element);
+                }
+                continue;
+            }
+            if(startWildcard) {
+                var starterSubstring = expression.substring(1);
+                if(str.endsWith(starterSubstring)) {
+                    returnElements.push(element);
+                }
+                continue;
+            }
+            if(endWildcard) {
+                var terminatorSubstring = expression.substring(0, expression.length - 1);
+                if(str.startsWith(terminatorSubstring)) {
+                    returnElements.push(element);
+                }
+                continue;
+            }
+
+            if(str == expression) {
+                returnElements.push(element);
+                continue;
+            }
+        }
+        return returnElements;
+    }
+})();

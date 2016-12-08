@@ -11,7 +11,7 @@
 
 		function HighlightDirectiveLink(scope, element, attrs) {
 			var originalClasses = element.attr("class");
-			scope.$watch(function(){ return Messages.getChangeCount();}, function(newValue, oldValue) {highlightElement();});
+			scope.$watch(function(){ return Messages.getChangeCount();}, highlightElement);
 			
 			function highlightElement() {
 				element.attr("class", originalClasses);
