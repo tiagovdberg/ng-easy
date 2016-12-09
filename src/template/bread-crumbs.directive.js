@@ -12,7 +12,7 @@
 
 		function BreadCrumbsDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var dynamicalyAddedElements = [];
-			scope.$watch(function(){ return Template.isMenuVisible();}, processElements);
+			scope.$watch(function(){ return Template.getBreadCrumbs();}, processElements);
 			
 			function processElements() {
 				dynamicalyAddedElements.forEach(function(dynamicalyAddedElement) {

@@ -16,9 +16,7 @@
 		self.setMenuVisible = setMenuVisible;
 		self.getMenus = getMenus;
 		self.addMenu = addMenu;
-		self.isLoading = isLoading;
-		self.showLoading = showLoading;
-		self.hideLoading = hideLoading;
+
 		init();
 		
 		function init() {
@@ -28,7 +26,6 @@
 			self.scripts = [];
 			self.menuVisible=true;
 			self.menus = [];
-			self.loading = false;
 		}
 
 		function getTitle() {
@@ -77,18 +74,6 @@
 
 		function addMenu(menuToAdd) {
 			self.menus.push(menuToAdd);
-		}
-
-		function isLoading() {
-			return self.loading;
-		}
-
-		function showLoading() {
-			self.loading = true;
-		}
-
-		function hideLoading() {
-			self.loading = false;
 		}
 	}
 })();	

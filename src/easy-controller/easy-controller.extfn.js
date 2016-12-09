@@ -180,9 +180,6 @@
 				if(typeof serviceMethod === 'undefined') {
 					return;
 				}
-
-//				//FIXME ????
-//				self.model[newStatusName] = (typeof oldStatusName !== 'undefined') ? self.model[oldStatusName] : {};
 				
 				var serviceUrl = (typeof effectiveConfig.status[newStatusName].serviceUrl !== 'undefined') ? 
 						$injector.get('Urls').getBaseUrl() + evalFunctionOrValue(effectiveConfig.status[newStatusName].serviceUrl) : 
@@ -191,7 +188,8 @@
 				var successFn = (typeof effectiveConfig.status[newStatusName].success !== 'undefined') ? effectiveConfig.status[newStatusName].success : ServiceSuccessPrototype;  
 				var failFn = (typeof effectiveConfig.status[newStatusName].fail !== 'undefined') ? effectiveConfig.status[newStatusName].fail : ServiceFailPrototype;
 				
-				$injector.get('Template').showLoading();
+				var loading = evalFunctionOrValue(effectiveConfig.status[newStatusName].loading);
+				$injector.get('Loading').startLoading(loading);
 				$injector.get('$http')({
 					method: serviceMethod,
 					data: self.model[oldStatusName],
@@ -199,7 +197,7 @@
 				}).then(
 					successFn, 
 					failFn
-				).finally($injector.get('Template').hideLoading);
+				).finally(function() { $injector.get('Loading').stopLoading(loading) ; });
 
 				//TODO model and data must accept functions with response as argument.
 				function ServiceSuccessPrototype(response) {
@@ -216,10 +214,12 @@
 					if(statusChanged) {
 						self[statusOnSuccess]();
 					}
+
 					var locationOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].locationOnSuccess);
 					if(typeof locationOnSuccess !== 'undefined') {
 						$injector.get('$location').url(locationOnSuccess);
 					}
+					
 					var messageOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].messageOnSuccess);
 					if(messageOnSuccess) {
 						if(typeof locationOnSuccess !== 'undefined') {
@@ -371,6 +371,7 @@
 			var effectiveStatus = {};
 			effectiveStatus.route = getEffectiveStatusRoute(statusName, status);
 			effectiveStatus.templateUrl = getEffectiveStatusTemplateUrl(statusName, status);
+			effectiveStatus.loading = getEffectiveStatusLoading(statusName, status);
 			effectiveStatus.serviceMethod = getEffectiveStatusServiceMethod(statusName, status);
 			effectiveStatus.serviceUrl = getEffectiveStatusServiceUrl(statusName, status); 
 			effectiveStatus.statusOnSuccess = getEffectiveStatusStatusOnSuccess(statusName, status);
@@ -398,6 +399,12 @@
 			return (typeof status.templateUrl !== 'undefined')  ?
 				status.templateUrl : 
 				'/' + transformStatusNameToHtmlName(statusName) + '.html';
+		}
+
+		function getEffectiveStatusLoading(statusName, status) {
+			return (typeof status.loading !== 'undefined')  ?
+				status.loading : 
+				'global';
 		}
 		
 		function getEffectiveStatusServiceMethod(statusName, status) {

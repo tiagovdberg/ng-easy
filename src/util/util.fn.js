@@ -11,7 +11,7 @@
         var endWildcard = expression.endsWith("*");
         for (var elementIndex = 0; elementIndex < elements.length; elementIndex++) {
             var element = elements[elementIndex];
-            var str = strExtractorFn(element);
+            var str;
             if(typeof strExtractorFn !== 'undefined') {
                 str = strExtractorFn(element);
             } else {

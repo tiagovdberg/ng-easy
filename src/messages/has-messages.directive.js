@@ -13,11 +13,12 @@
 		function HasMessagesDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var originalElementClone = transclude();
 			scope.$watch(function(){ return Messages.getChangeCount();}, processElement);
+			
 			function processElement() {
 				var hasMessagesExpressions = attrs.ngEasyHasMessages.split(';');
 				var hasMessages = false;
-				hasMessagesExpressions.forEach(function(showMessageExpression) {
-					var messages = Messages.getMessages(showMessageExpression);
+				hasMessagesExpressions.forEach(function(hasMessageExpression) {
+					var messages = Messages.getMessages(hasMessageExpression);
 					hasMessages = hasMessages || (messages.length > 0); 
 				});
 				if(hasMessages) {

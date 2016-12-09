@@ -7,9 +7,8 @@
 		self.$get = MessagesFactory; 
 		self.addMessagesMap = addMessagesMap;
 
-		MessagesFactory.$inject= ['$rootScope'];
-		function MessagesFactory($rootScope) {
-			return new Messages($rootScope, self.messagesMap);
+		function MessagesFactory() {
+			return new Messages(self.messagesMap);
 		}
 		
 		function addMessagesMap(newMessagesMap) {
@@ -41,7 +40,7 @@
 		}
 	}
 	
-	function Messages($rootScope, messagesMap) {
+	function Messages(messagesMap) {
 		var //const
 			FATAL = 'fatal',
 			ERROR = 'error',
@@ -59,7 +58,6 @@
 
 		self.getChangeCount = getChangeCount;
 		self.getMessages = getMessages;
-		self.setMessages = setMessages;
 		self.addMessage = addMessage;
 		self.clearMessages = clearMessages;
 		self.handleErrors = handleErrors;
@@ -71,7 +69,6 @@
 			self.messagesMap = messagesMap;
 			self.messages = [];
 			self.changeCount = 0;
-//			$rootScope.$on('$routeChangeStart', function(next, current) {expiryMessages();});
 		}
 
 		function getChangeCount() {
@@ -79,16 +76,11 @@
 		}
 
 		function getMessages(expression) {
-			if(!expression || expression == "*") {
+			if((typeof expression === 'undefined') || expression === "*") {
 				return self.messages;
 			}
 			
 			return angular.easy.$$filterElements(self.messages, expression, function(message) { return message.id; });
-		}
-
-		function setMessages(newMessages) {
-			self.messages = newMessages;
-			self.changeCount++;
 		}
 
 		function addMessage(newMessage) {

@@ -30,30 +30,6 @@
 })();
 
 (function() {
-	angular.module('ngEasy')
-		.directive('ngEasyAlias', AliasDirective);
-
-	function AliasDirective() {
-		return {
-			restrict : "EA",
-			link : AliasDirectiveLink
-		};
-
-		function AliasDirectiveLink(scope, element, attrs) {
-			var aliasAndExpressions = attrs.ngEasyAlias.split(';');
-			aliasAndExpressions.forEach(function(aliasAndExpression) {
-				var aliasAndExpressionArray = aliasAndExpression.split(' as ');
-				if(aliasAndExpressionArray.length != 2) {
-					throw "Alias and/or Expression not valid. Format: {alias} as {expression}";
-				}
-				var alias = aliasAndExpressionArray[0].trim();
-				var expression = aliasAndExpressionArray[1].trim();
-				scope.$watch(function(){ return scope.$eval(expression);}, function(newValue, oldValue) {scope[alias]=newValue;});
-			});
-		}
-	}
-})();
-(function() {
 	var //const
 		CONTROLLERDEFAULTSUFFIXES = ['Controller', 'Ctrl', 'Ctl'],
 		CONTROLLERSCOPEVARIABLENAMESUFFIX = 'Ctrl',
@@ -235,9 +211,6 @@
 				if(typeof serviceMethod === 'undefined') {
 					return;
 				}
-
-//				//FIXME ????
-//				self.model[newStatusName] = (typeof oldStatusName !== 'undefined') ? self.model[oldStatusName] : {};
 				
 				var serviceUrl = (typeof effectiveConfig.status[newStatusName].serviceUrl !== 'undefined') ? 
 						$injector.get('Urls').getBaseUrl() + evalFunctionOrValue(effectiveConfig.status[newStatusName].serviceUrl) : 
@@ -246,7 +219,8 @@
 				var successFn = (typeof effectiveConfig.status[newStatusName].success !== 'undefined') ? effectiveConfig.status[newStatusName].success : ServiceSuccessPrototype;  
 				var failFn = (typeof effectiveConfig.status[newStatusName].fail !== 'undefined') ? effectiveConfig.status[newStatusName].fail : ServiceFailPrototype;
 				
-				$injector.get('Template').showLoading();
+				var loading = evalFunctionOrValue(effectiveConfig.status[newStatusName].loading);
+				$injector.get('Loading').startLoading(loading);
 				$injector.get('$http')({
 					method: serviceMethod,
 					data: self.model[oldStatusName],
@@ -254,7 +228,7 @@
 				}).then(
 					successFn, 
 					failFn
-				).finally($injector.get('Template').hideLoading);
+				).finally(function() { $injector.get('Loading').stopLoading(loading) ; });
 
 				//TODO model and data must accept functions with response as argument.
 				function ServiceSuccessPrototype(response) {
@@ -271,10 +245,12 @@
 					if(statusChanged) {
 						self[statusOnSuccess]();
 					}
+
 					var locationOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].locationOnSuccess);
 					if(typeof locationOnSuccess !== 'undefined') {
 						$injector.get('$location').url(locationOnSuccess);
 					}
+					
 					var messageOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].messageOnSuccess);
 					if(messageOnSuccess) {
 						if(typeof locationOnSuccess !== 'undefined') {
@@ -426,6 +402,7 @@
 			var effectiveStatus = {};
 			effectiveStatus.route = getEffectiveStatusRoute(statusName, status);
 			effectiveStatus.templateUrl = getEffectiveStatusTemplateUrl(statusName, status);
+			effectiveStatus.loading = getEffectiveStatusLoading(statusName, status);
 			effectiveStatus.serviceMethod = getEffectiveStatusServiceMethod(statusName, status);
 			effectiveStatus.serviceUrl = getEffectiveStatusServiceUrl(statusName, status); 
 			effectiveStatus.statusOnSuccess = getEffectiveStatusStatusOnSuccess(statusName, status);
@@ -453,6 +430,12 @@
 			return (typeof status.templateUrl !== 'undefined')  ?
 				status.templateUrl : 
 				'/' + transformStatusNameToHtmlName(statusName) + '.html';
+		}
+
+		function getEffectiveStatusLoading(statusName, status) {
+			return (typeof status.loading !== 'undefined')  ?
+				status.loading : 
+				'global';
 		}
 		
 		function getEffectiveStatusServiceMethod(statusName, status) {
@@ -645,6 +628,138 @@
 })();
 (function() {
 	angular.module('ngEasy')
+		.directive('ngEasyAlias', AliasDirective);
+
+	function AliasDirective() {
+		return {
+			restrict : "EA",
+			link : AliasDirectiveLink
+		};
+
+		function AliasDirectiveLink(scope, element, attrs) {
+			var aliasAndExpressions = attrs.ngEasyAlias.split(';');
+			aliasAndExpressions.forEach(function(aliasAndExpression) {
+				var aliasAndExpressionArray = aliasAndExpression.split('=');
+				if(aliasAndExpressionArray.length != 2) {
+					throw "Alias and/or Expression not valid. Format: {alias} = {expression}";
+				}
+				var alias = aliasAndExpressionArray[0].trim();
+				var expression = aliasAndExpressionArray[1].trim();
+				scope.$watch(function(){ return scope.$eval(expression);}, function(newValue, oldValue) {scope[alias]=newValue;});
+			});
+		}
+	}
+})();
+(function() {
+	angular.module('ngEasy')
+		.directive('ngEasyIsLoading', IsLoadingDirective);
+
+	IsLoadingDirective.$inject=['Loading'];
+	function IsLoadingDirective(Loading) {
+		return {
+			restrict: 'EA',
+			link : IsLoadingDirectiveLink
+		};
+
+		function IsLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
+			
+			function processElement() {
+				var loadingExpressions = attrs.ngEasyIsLoading.split(';');
+				var isLoading = false;
+				loadingExpressions.forEach(function(loadingExpression) {
+					var loadings = Loading.getLoadings(loadingExpression);
+					isLoading = isLoading || (loadings.length > 0); 
+				});
+				if(isLoading) {
+					element.prop('style').removeProperty('display');
+					return;
+				}
+				element.prop('style').display = 'none';
+			}
+		}
+	}
+		
+})();
+(function() {	
+	angular.module('ngEasy').service('Loading', LoadingService);
+
+	function LoadingService() {
+		var self = this;
+
+		self.getChangeCount = getChangeCount;
+		self.getLoadings = getLoadings;
+		self.startLoading = startLoading;
+		self.stopLoading = stopLoading;
+		
+		init();
+		
+		function init() {
+			self.loadings = [];
+			self.changeCount = 0;
+		}
+
+		function getChangeCount() {
+			return self.changeCount;
+		}
+
+		function getLoadings(expression) {
+			if((typeof expression === 'undefined') || expression === "*") {
+				return self.loadings;
+			}
+			
+			return angular.easy.$$filterElements(self.loadings, expression);
+		}
+
+		function startLoading(loadingId) {
+			self.loadings.push(loadingId);
+			self.changeCount++;
+		}
+
+		function stopLoading(loadingId) {
+			var index = self.loadings.indexOf(loadingId);
+			if(index === -1) {
+				return;
+			}
+			self.loadings.splice(index, 1);
+			self.changeCount++;
+		}
+		
+	}
+})();	
+(function() {
+	angular.module('ngEasy')
+		.directive('ngEasyNotLoading', NotLoadingDirective);
+
+	NotLoadingDirective.$inject=['Loading'];
+	function NotLoadingDirective(Loading) {
+		return {
+			restrict: 'EA',
+			link : NotLoadingDirectiveLink
+		};
+
+		function NotLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
+			
+			function processElement() {
+				var loadingExpressions = attrs.ngEasyNotLoading.split(';');
+				var isLoading = false;
+				loadingExpressions.forEach(function(loadingExpression) {
+					var loadings = Loading.getLoadings(loadingExpression);
+					isLoading = isLoading || (loadings.length > 0); 
+				});
+				if(isLoading) {
+					element.prop('style').display = 'none';
+					return;
+				}
+				element.prop('style').removeProperty('display');
+			}
+		}
+	}
+		
+})();
+(function() {
+	angular.module('ngEasy')
 		.directive('ngEasyHasMessages', HasMessagesDirective);
 
 	HasMessagesDirective.$inject=['Messages'];
@@ -658,11 +773,12 @@
 		function HasMessagesDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var originalElementClone = transclude();
 			scope.$watch(function(){ return Messages.getChangeCount();}, processElement);
+			
 			function processElement() {
 				var hasMessagesExpressions = attrs.ngEasyHasMessages.split(';');
 				var hasMessages = false;
-				hasMessagesExpressions.forEach(function(showMessageExpression) {
-					var messages = Messages.getMessages(showMessageExpression);
+				hasMessagesExpressions.forEach(function(hasMessageExpression) {
+					var messages = Messages.getMessages(hasMessageExpression);
 					hasMessages = hasMessages || (messages.length > 0); 
 				});
 				if(hasMessages) {
@@ -765,9 +881,8 @@
 		self.$get = MessagesFactory; 
 		self.addMessagesMap = addMessagesMap;
 
-		MessagesFactory.$inject= ['$rootScope'];
-		function MessagesFactory($rootScope) {
-			return new Messages($rootScope, self.messagesMap);
+		function MessagesFactory() {
+			return new Messages(self.messagesMap);
 		}
 		
 		function addMessagesMap(newMessagesMap) {
@@ -799,7 +914,7 @@
 		}
 	}
 	
-	function Messages($rootScope, messagesMap) {
+	function Messages(messagesMap) {
 		var //const
 			FATAL = 'fatal',
 			ERROR = 'error',
@@ -817,7 +932,6 @@
 
 		self.getChangeCount = getChangeCount;
 		self.getMessages = getMessages;
-		self.setMessages = setMessages;
 		self.addMessage = addMessage;
 		self.clearMessages = clearMessages;
 		self.handleErrors = handleErrors;
@@ -829,7 +943,6 @@
 			self.messagesMap = messagesMap;
 			self.messages = [];
 			self.changeCount = 0;
-//			$rootScope.$on('$routeChangeStart', function(next, current) {expiryMessages();});
 		}
 
 		function getChangeCount() {
@@ -837,16 +950,11 @@
 		}
 
 		function getMessages(expression) {
-			if(!expression || expression == "*") {
+			if((typeof expression === 'undefined') || expression === "*") {
 				return self.messages;
 			}
 			
 			return angular.easy.$$filterElements(self.messages, expression, function(message) { return message.id; });
-		}
-
-		function setMessages(newMessages) {
-			self.messages = newMessages;
-			self.changeCount++;
 		}
 
 		function addMessage(newMessage) {
@@ -958,7 +1066,7 @@
 
 		function BreadCrumbsDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var dynamicalyAddedElements = [];
-			scope.$watch(function(){ return Template.isMenuVisible();}, processElements);
+			scope.$watch(function(){ return Template.getBreadCrumbs();}, processElements);
 			
 			function processElements() {
 				dynamicalyAddedElements.forEach(function(dynamicalyAddedElement) {
@@ -971,6 +1079,34 @@
 					dynamicalyAddedElements.push(originalElementClone);
 					element.after(originalElementClone);
 				});
+			}
+		}
+	}
+		
+})();
+(function() {
+	angular.module('ngEasy')
+		.directive('ngEasyDefaultStyleSheet', DefaultStyleSheetDirective);
+
+	DefaultStyleSheetDirective.$inject=['Template'];
+	function DefaultStyleSheetDirective(Template) {
+		return {
+			restrict: 'EA',
+		    transclude: 'element',
+			link : DefaultStyleSheetDirectiveLink
+		};
+
+		function DefaultStyleSheetDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			var originalElementClone = transclude();
+			scope.$watch(function(){ return Template.getStyleSheets();}, processElement);
+			
+			function processElement() {
+				if(Template.getStyleSheets().length === 0) {
+					element.after(originalElementClone);
+					return;
+				}
+				originalElementClone.remove();
+				return;
 			}
 		}
 	}
@@ -1008,8 +1144,8 @@
 	angular.module('ngEasy')
 		.directive('ngEasyMenus', MenusDirective);
 
-	MenusDirective.$inject = ['Template']; 
-	function MenuDirective(Template) {
+	MenusDirective.$inject = ['Template', '$location', '$route']; 
+	function MenusDirective(Template, $location, $route) {
 		return {
 			restrict: 'EA',
 		    transclude: 'element',
@@ -1027,9 +1163,55 @@
 				dynamicalyAddedElements.length = 0;
 				var menus = Template.getMenus();
 				menus.forEach(function(menu) {
-					var originalElementClone = transclude(function(clone, transcludeScope) {transcludeScope.menu = menu;});
+					var menuWithGoFunction = angular.merge({ go: function() { menuGo(menu) ; } }, menu);
+					var originalElementClone = transclude(function(clone, transcludeScope) {transcludeScope.menu = menuWithGoFunction;});
 					dynamicalyAddedElements.push(originalElementClone);
 					element.after(originalElementClone);
+				});
+			}
+		}
+
+		function menuGo(menu) {
+			var oldLocation = $location.url();
+			if(oldLocation !== menu.path) {
+				$location.url(menu.path);
+				return;
+			}
+			$route.reload();
+		}
+	}
+})();
+(function() {
+	angular.module('ngEasy')
+		.directive('ngEasyScripts', ScriptsDirective);
+
+	ScriptsDirective.$inject = ['Template']; 
+	function ScriptsDirective(Template) {
+		var scriptDomElement = document.createElement('script');
+		scriptDomElement.setAttribute('type', 'application/javascript');
+		var scriptElement = angular.element(scriptDomElement);
+
+		return {
+			restrict: 'E',
+		    transclude: 'element',
+			link : ScriptsDirectiveLink
+		};
+
+		function ScriptsDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			var dynamicalyAddedElements = [];
+			scope.$watch(function(){ return Template.getScripts();}, processElements);
+			
+			function processElements() {
+				dynamicalyAddedElements.forEach(function(dynamicalyAddedElement) {
+					dynamicalyAddedElement.remove();
+				});
+				dynamicalyAddedElements.length = 0;
+				var scripts = Template.getScripts();
+				scripts.forEach(function(script) {
+					var scriptElementClone = scriptElement.clone();
+					scriptElementClone.attr('src', script);
+					dynamicalyAddedElements.push(scriptElementClone);
+					element.after(scriptElementClone);
 				});
 			}
 		}
@@ -1038,53 +1220,41 @@
 })();
 (function() {
 	angular.module('ngEasy')
-		.controller('TemplateController', TemplateController);
+		.directive('ngEasyStyleSheets', StyleSheetsDirective);
 
-	TemplateController.$inject = [ 'Template', '$location', '$route' ];
-	function TemplateController(Template, $location, $route) {
-		var self = this;
-		self.getTitle = getTitle;
-		self.getBreadCrumbs = getBreadCrumbs;
-		self.getStyleSheets = getStyleSheets;
-		self.getScripts = getScripts;
-		self.isMenuVisible = isMenuVisible;
-		self.getMenus = getMenus;
-		self.clickMenu = clickMenu;
-		self.isLoading = isLoading;
+	StyleSheetsDirective.$inject = ['Template']; 
+	function StyleSheetsDirective(Template) {
+		var styleSheetDomElement = document.createElement('link');
+		styleSheetDomElement.setAttribute('rel', 'stylesheet');
+		styleSheetDomElement.setAttribute('type', 'text/css');
+		var styleSheetElement = angular.element(styleSheetDomElement);
 
-		function getTitle() {
-			return Template.getTitle();
-		}
+		return {
+			restrict: 'E',
+		    transclude: 'element',
+			link : StyleSheetsDirectiveLink
+		};
 
-		function getBreadCrumbs() {
-			return Template.getBreadCrumbs();
-		}
-
-		function getStyleSheets() {
-			return Template.getStyleSheets();
-		}
-
-		function getScripts() {
-			return Template.getScripts();
-		}
-
-		function isMenuVisible(aMenu) {
-			return Template.isMenuVisible(aMenu);
-		}
-
-		function getMenus() {
-			return Template.getMenus();
-		}
-		
-		function clickMenu(locationPath) {
-			$location.url(locationPath);
-			$route.reload();
-		}
-		
-		function isLoading() {
-			return Template.isLoading();
+		function StyleSheetsDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			var dynamicalyAddedElements = [];
+			scope.$watch(function(){ return Template.getStyleSheets();}, processElements);
+			
+			function processElements() {
+				dynamicalyAddedElements.forEach(function(dynamicalyAddedElement) {
+					dynamicalyAddedElement.remove();
+				});
+				dynamicalyAddedElements.length = 0;
+				var styleSheets = Template.getStyleSheets();
+				styleSheets.forEach(function(styleSheet) {
+					var styleSheetElementClone = styleSheetElement.clone();
+					styleSheetElementClone.attr('href', styleSheet);
+					dynamicalyAddedElements.push(styleSheetElementClone);
+					element.after(styleSheetElementClone);
+				});
+			}
 		}
 	}
+		
 })();
 (function() {	
 	angular.module('ngEasy')
@@ -1100,23 +1270,16 @@
 				styleSheets : '=',
 				scripts : '=',
 				menuVisible : '=',
-				loading : '='
 			},
 			link : TemplateDirectiveLink
 		};
 		
 		function TemplateDirectiveLink(scope, element, attrs) {
-			if(scope.loading) {
-				Template.showLoading();
-				return;
-			}
-
 			Template.setTitle(scope.title || '');
 			Template.setBreadCrumbs(scope.breadCrumbs || []);
 			Template.setStyleSheets(scope.styleSheets || []);
 			Template.setScripts(scope.scripts || []);
 			Template.setMenuVisible((typeof scope.menuVisible !== 'undefined') ? scope.menuVisible : true);
-			Template.hideLoading();	
 		}
 	}
 })();	
@@ -1138,9 +1301,7 @@
 		self.setMenuVisible = setMenuVisible;
 		self.getMenus = getMenus;
 		self.addMenu = addMenu;
-		self.isLoading = isLoading;
-		self.showLoading = showLoading;
-		self.hideLoading = hideLoading;
+
 		init();
 		
 		function init() {
@@ -1150,7 +1311,6 @@
 			self.scripts = [];
 			self.menuVisible=true;
 			self.menus = [];
-			self.loading = false;
 		}
 
 		function getTitle() {
@@ -1200,20 +1360,41 @@
 		function addMenu(menuToAdd) {
 			self.menus.push(menuToAdd);
 		}
-
-		function isLoading() {
-			return self.loading;
-		}
-
-		function showLoading() {
-			self.loading = true;
-		}
-
-		function hideLoading() {
-			self.loading = false;
-		}
 	}
 })();	
+(function() {
+	angular.module('ngEasy')
+		.directive('ngEasyTitle', TitleDirective);
+
+	TitleDirective.$inject=['Template'];
+	function TitleDirective(Template) {
+		return {
+			restrict: 'EA',
+		    transclude: 'element',
+			link : TitleDirectiveLink
+		};
+
+		function TitleDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			var originalElementClone = transclude();
+			var isElement = (originalElementClone.prop('tagName') === 'NG-EASY:TITLE');
+			var titleElement = isElement ? angular.element(document.createElement('title')) : originalElementClone;
+
+			scope.$watch(function(){ return Template.getTitle();}, processElement);
+			
+			function processElement() {
+				var titleValue = Template.getTitle();
+				if(titleValue !== '') {
+					titleElement.text(titleValue);
+					element.after(titleElement);
+					return;
+				}
+				titleElement.remove();
+				return;
+			}
+		}
+	}
+		
+})();
 (function() {
 	angular.module('ngEasy')
 		.directive('ngEasyUncloak', UncloakDirective);
@@ -1403,7 +1584,7 @@
         var endWildcard = expression.endsWith("*");
         for (var elementIndex = 0; elementIndex < elements.length; elementIndex++) {
             var element = elements[elementIndex];
-            var str = strExtractorFn(element);
+            var str;
             if(typeof strExtractorFn !== 'undefined') {
                 str = strExtractorFn(element);
             } else {
