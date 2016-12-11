@@ -1,3 +1,7 @@
+//TODO Documentation JSDoc
+//TODO Automaticaly start on specific state based on Status route.
+//TODO InitialStatus has a default if there is only one state.
+
 (function() {
 	var //const
 		CONTROLLERDEFAULTSUFFIXES = ['Controller', 'Ctrl', 'Ctl'],
@@ -45,34 +49,11 @@
 
 			$controllerProvider.register(effectiveConfig.controllerName, effectiveConfig.controller);
 
-			// Register Controller Routes
-			var controllerRouteConfig = {
-				controller : effectiveConfig.controllerName,
-				controllerAs : effectiveConfig.controllerAs,
-				template : '<ng:include src="' + effectiveConfig.controllerAs + '.getTemplateUrl()"></ng:include>'
-			};
-
-			var foundControllerRoute = false; 
-			var foundStatusRoute = false; 
-			
-			
-			if(typeof effectiveConfig.route !== 'undefined') {
-				$routeProvider.when(effectiveConfig.route, controllerRouteConfig);
-			} else {
-				for (var statusName in effectiveConfig.status) {
-					if (!effectiveConfig.status.hasOwnProperty(statusName)) {
-						continue;
-					}
-					var status = effectiveConfig.status[statusName];
-					if (typeof status.route === 'undefined') {
-						continue;
-					}
-					var route = effectiveConfig.routeBase + status.route;
-					$routeProvider.when(route, controllerRouteConfig);
-				}
-			}
-
 			var $injector;
+
+			if(effectiveConfig.configureRoutes === true) {
+				configureRoutes();			
+			}
 			
 			injectInitMethod();
 			injectAndInitializeStatusAndModelAndData();
@@ -84,6 +65,32 @@
 			}
 			
 			return;
+
+
+			function configureRoutes() {
+				// Register Controller Routes
+				var controllerRouteConfig = {
+					controller : effectiveConfig.controllerName,
+					controllerAs : effectiveConfig.controllerAs,
+					template : '<ng:include src="' + effectiveConfig.controllerAs + '.getTemplateUrl()"></ng:include>'
+				};
+				
+				if(typeof effectiveConfig.route !== 'undefined') {
+					$routeProvider.when(effectiveConfig.route, controllerRouteConfig);
+				} else {
+					for (var statusName in effectiveConfig.status) {
+						if (!effectiveConfig.status.hasOwnProperty(statusName)) {
+							continue;
+						}
+						var status = effectiveConfig.status[statusName];
+						if (typeof status.route === 'undefined') {
+							continue;
+						}
+						var route = effectiveConfig.routeBase + status.route;
+						$routeProvider.when(route, controllerRouteConfig);
+					}
+				}
+			}
 
 			function injectInitMethod() {
 				effectiveConfig.controller.prototype.init = initInjectionMethod;
@@ -278,10 +285,13 @@
 		validateControllerNameEvaluationPossible(config);
 		effectiveConfig.controller = getEffectiveController(); 
 		effectiveConfig.controllerName = getEffectiveControllerName();
-		effectiveConfig.controllerAs = getEffectiveControllerScopeVariableName();
-		validateRouteConfig(config);
-		effectiveConfig.route = getEffectiveRoute();
-		effectiveConfig.routeBase = getEffectiveRouteBase();
+		effectiveConfig.configureRoutes = getEffectiveConfigureRoutes();
+		validateRouteConfig(config, effectiveConfig.configureRoutes);
+		if(effectiveConfig.configureRoutes === true) {
+			effectiveConfig.controllerAs = getEffectiveControllerScopeVariableName();
+			effectiveConfig.route = getEffectiveRoute();
+			effectiveConfig.routeBase = getEffectiveRouteBase();
+		}
 		effectiveConfig.templateBaseUrl = getEffectiveTemplateBaseUrl();
 		effectiveConfig.status = getEffectiveStatuses();
 		effectiveConfig.initialStatus = getEffectiveInitialStatus();
@@ -303,6 +313,13 @@
 			return (typeof config.controllerName !== 'undefined') ? 
 				evalFunctionOrValue(config.controllerName) : 
 				config.controller.name;
+		}
+
+		function getEffectiveConfigureRoutes() {
+			if (typeof config.configureRoutes !== 'undefined') {
+				return evalFunctionOrValue(config.configureRoutes);
+			}
+			return true;
 		}
 
 		function getEffectiveControllerScopeVariableName() {
@@ -369,7 +386,9 @@
 		
 		function getEffectiveStatus(statusName, status) {
 			var effectiveStatus = {};
-			effectiveStatus.route = getEffectiveStatusRoute(statusName, status);
+			if(effectiveConfig.configureRoutes === true) {
+				effectiveStatus.route = getEffectiveStatusRoute(statusName, status);
+			}
 			effectiveStatus.templateUrl = getEffectiveStatusTemplateUrl(statusName, status);
 			effectiveStatus.loading = getEffectiveStatusLoading(statusName, status);
 			effectiveStatus.serviceMethod = getEffectiveStatusServiceMethod(statusName, status);
@@ -489,7 +508,11 @@
 		}
 	}
 	
-	function validateRouteConfig(config) {
+	function validateRouteConfig(config, configureRoutes) {
+		if(configureRoutes === false) {
+			validateForbiddenRouteConfig(config);
+			return;
+		}
 		if(typeof config.route === 'undefined') {
 			return;
 		}
@@ -506,6 +529,30 @@
 			}
 			if(typeof statusesValue[statusName].route !== 'undefined') {
 				throw '[config.route] and [config.status[\'' + statusName + '\'].route] are mutually exclusive.';
+			}
+		}
+	}
+
+	function validateForbiddenRouteConfig(config) {
+		if(typeof config.route !== 'undefined') {
+			throw '[config.configureRoutes = false] and [config.route] are mutually exclusive.';
+		}
+		if(typeof config.routeBase !== 'undefined') {
+			throw '[config.configureRoutes = false] and [config.routeBase] are mutually exclusive.';
+		}
+		if(typeof config.controllerAs !== 'undefined') {
+			throw '[config.configureRoutes = false] and [config.controllerAs] are mutually exclusive.';
+		}
+		var statusesValue = evalFunctionOrValue(config.status);
+		if (typeof statusesValue === 'undefined') {
+			return;
+		}
+		for (var statusName in statusesValue) {
+			if (!statusesValue.hasOwnProperty(statusName)) {
+				continue;
+			}
+			if(typeof statusesValue[statusName].route !== 'undefined') {
+				throw '[config.configureRoutes = false] and [config.status[\'' + statusName + '\'].route] are mutually exclusive.';
 			}
 		}
 	}
