@@ -1,6 +1,6 @@
 (function() {
-	angular.module('ngEasy')
-		.directive('ngEasyHasMessages', HasMessagesDirective);
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'HasMessages', HasMessagesDirective);
 
 	HasMessagesDirective.$inject=['Messages'];
 	function HasMessagesDirective(Messages) {

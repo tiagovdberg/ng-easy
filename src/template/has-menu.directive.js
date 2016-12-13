@@ -1,6 +1,6 @@
 (function() {
-	angular.module('ngEasy')
-		.directive('ngEasyHasMenu', HasMenuDirective);
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'HasMenu', HasMenuDirective);
 
 	HasMenuDirective.$inject=['Template'];
 	function HasMenuDirective(Template) {

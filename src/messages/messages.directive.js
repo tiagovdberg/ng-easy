@@ -1,6 +1,6 @@
 (function() {
-	angular.module('ngEasy')
-		.directive('ngEasyMessages', MessagesDirective);
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'Messages', MessagesDirective);
 
 	MessagesDirective.$inject = ['Messages']; 
 	function MessagesDirective(Messages) {

@@ -1,11 +1,27 @@
 (function() {
-  angular.module('ngEasy', [ 'ngRoute' ]);
-  angular.easy = {};
+  if(typeof angular.easy === 'undefined') {
+      angular.easy = {};
+  }
+
+  if(typeof angular.easy.$moduleName === 'undefined') {
+      angular.easy.$moduleName = 'ngEasy';
+  }
+
+  if(typeof angular.easy.$directivesPrefix === 'undefined') {
+      angular.easy.$directivesPrefix = 'ngEasy';
+  }
+
+  if(typeof angular.easy.$providersPrefix === 'undefined') {
+      angular.easy.$providersPrefix = '';
+  }
+
+  angular.module(angular.easy.$moduleName, [ 'ngRoute' ]);
   angular.easy.registerFunction = registerFunction;
   angular.easy.registerOnModule = registerOnModule;
   angular.easy.bind = bind;
 
   var functions = {};
+  
   function registerFunction(name, fn) {
     functions[name] = fn;
   }

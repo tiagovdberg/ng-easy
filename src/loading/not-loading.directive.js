@@ -1,6 +1,6 @@
 (function() {
-	angular.module('ngEasy')
-		.directive('ngEasyNotLoading', NotLoadingDirective);
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'NotLoading', NotLoadingDirective);
 
 	NotLoadingDirective.$inject=['Loading'];
 	function NotLoadingDirective(Loading) {

@@ -1,6 +1,6 @@
 (function() {	
-	angular.module('ngEasy')
-	  .service('Template', TemplateService);
+	angular.module(angular.easy.$moduleName)
+	  .service(angular.easy.$providersPrefix + 'Template', TemplateService);
 		
 	function TemplateService() {
 		var self = this;

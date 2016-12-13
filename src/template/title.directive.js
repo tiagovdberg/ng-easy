@@ -1,6 +1,6 @@
 (function() {
-	angular.module('ngEasy')
-		.directive('ngEasyTitle', TitleDirective);
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'Title', TitleDirective);
 
 	TitleDirective.$inject=['Template'];
 	function TitleDirective(Template) {

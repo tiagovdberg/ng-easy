@@ -1,6 +1,6 @@
 (function() {
-    angular.module('ngEasy')
-        .service('Urls', UrlsService);
+    angular.module(angular.easy.$moduleName)
+        .service(angular.easy.$providersPrefix + 'Urls', UrlsService);
 
     UrlsService.$inject = ['$location'];
     function UrlsService($location) {

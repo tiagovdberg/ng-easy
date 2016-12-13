@@ -1,5 +1,5 @@
 (function() {	
-	angular.module('ngEasy').service('Loading', LoadingService);
+	angular.module(angular.easy.$moduleName).service(angular.easy.$providersPrefix + 'Loading', LoadingService);
 
 	function LoadingService() {
 		var self = this;

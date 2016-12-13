@@ -1,6 +1,6 @@
 (function() {
-	angular.module('ngEasy')
-		.directive('ngEasyDefaultStyleSheet', DefaultStyleSheetDirective);
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'DefaultStyleSheet', DefaultStyleSheetDirective);
 
 	DefaultStyleSheetDirective.$inject=['Template'];
 	function DefaultStyleSheetDirective(Template) {

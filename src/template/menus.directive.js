@@ -1,6 +1,6 @@
 (function() {
-	angular.module('ngEasy')
-		.directive('ngEasyMenus', MenusDirective);
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'Menus', MenusDirective);
 
 	MenusDirective.$inject = ['Template', '$location', '$route']; 
 	function MenusDirective(Template, $location, $route) {

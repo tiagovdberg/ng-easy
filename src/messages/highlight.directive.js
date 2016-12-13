@@ -1,6 +1,6 @@
 (function() {
-	angular.module('ngEasy')
-		.directive('ngEasyHighlight', HighlightDirective);
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'Highlight', HighlightDirective);
 
 	HighlightDirective.$inject=['Messages'];
 	function HighlightDirective(Messages) {

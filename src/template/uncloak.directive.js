@@ -1,6 +1,6 @@
 (function() {
-	angular.module('ngEasy')
-		.directive('ngEasyUncloak', UncloakDirective);
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'Uncloak', UncloakDirective);
 
 	function UncloakDirective() {
 		return {

@@ -1,5 +1,5 @@
 (function() {	
-	angular.module('ngEasy').provider('Messages', MessagesProvider);
+	angular.module(angular.easy.$moduleName).provider(angular.easy.$providersPrefix + 'Messages', MessagesProvider);
 
 	function MessagesProvider() {
 		var self = this;

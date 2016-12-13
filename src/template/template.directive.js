@@ -1,6 +1,6 @@
 (function() {	
-	angular.module('ngEasy')
-	  .directive('ngEasyTemplate', TemplateDirective);
+	angular.module(angular.easy.$moduleName)
+	  .directive(angular.easy.$directivesPrefix + 'Template', TemplateDirective);
 
 	TemplateDirective.$inject = [ 'Template' ];
 	function TemplateDirective(Template) {

@@ -1,6 +1,6 @@
 (function() {
-	angular.module('ngEasy')
-		.directive('ngEasyBreadCrumbs', BreadCrumbsDirective);
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'BreadCrumbs', BreadCrumbsDirective);
 
 	BreadCrumbsDirective.$inject = ['Template']; 
 	function BreadCrumbsDirective(Template) {
