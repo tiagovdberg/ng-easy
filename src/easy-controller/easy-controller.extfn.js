@@ -40,32 +40,30 @@
 			validateConfigIsObjectAndMustBeNotEmpty(configValue);
 			var effectiveConfig = getEffectiveConfig(moduleNameValue, configValue);
 
-			// Register Controller
-			if(typeof effectiveConfig.controller.$inject === 'undefined') {
-				effectiveConfig.controller.$inject =[];
-			}
-			var injectorArgumentIndex = effectiveConfig.controller.$inject.length;
-			effectiveConfig.controller.$inject.push('$injector');
-
-			$controllerProvider.register(effectiveConfig.controllerName, effectiveConfig.controller);
-
 			var $injector;
+			var injectorArgumentIndex;
 
+			registerController();
 			if(effectiveConfig.configureRoutes === true) {
 				configureRoutes();			
 			}
-			
 			injectInitMethod();
 			injectAndInitializeStatusAndModelAndData();
 			injectInexistentModelAndDataAndTemplateAcessors();
 			injectInexistentStatusMethods(effectiveConfig);
-
 			if(typeof effectiveConfig.messages !== 'undefined') {
 				MessagesProvider.addMessagesMap(effectiveConfig.messages);
 			}
-			
 			return;
 
+			function registerController() {
+				if(typeof effectiveConfig.controller.$inject === 'undefined') {
+					effectiveConfig.controller.$inject =[];
+				}
+				injectorArgumentIndex = effectiveConfig.controller.$inject.length;
+				effectiveConfig.controller.$inject.push('$injector');
+				$controllerProvider.register(effectiveConfig.controllerName, effectiveConfig.controller);
+			}
 
 			function configureRoutes() {
 				// Register Controller Routes
