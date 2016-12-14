@@ -1,5 +1,18 @@
 (function() {
+    angular.easy.property = property;
     angular.easy.$$filterElements = filterElements;
+
+    function property(obj, propertyName, initialValue) {
+        var privateAttr = '_' + propertyName;
+        obj[privateAttr] = initialValue;
+
+		obj[propertyName] = function(value) {
+			if(typeof value === 'undefined') {
+				return obj[privateAttr];
+			}
+			obj[privateAttr] = value;
+		};
+    }
 
     function filterElements(elements, expression, strExtractorFn) {
         if(!expression || expression == "*") {

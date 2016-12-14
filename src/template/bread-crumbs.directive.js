@@ -12,14 +12,14 @@
 
 		function BreadCrumbsDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var dynamicalyAddedElements = [];
-			scope.$watch(function(){ return Template.getBreadCrumbs();}, processElements);
+			scope.$watch(function(){ return Template.breadCrumbs();}, processElements);
 			
 			function processElements() {
 				dynamicalyAddedElements.forEach(function(dynamicalyAddedElement) {
 					dynamicalyAddedElement.remove();
 				});
 				dynamicalyAddedElements.length = 0;
-				var breadCrumbs = Template.getBreadCrumbs();
+				var breadCrumbs = Template.breadCrumbs();
 				breadCrumbs.forEach(function(breadCrumb) {
 					var originalElementClone = transclude(function(clone, transcludeScope) {transcludeScope.breadCrumb = breadCrumb;});
 					dynamicalyAddedElements.push(originalElementClone);

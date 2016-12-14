@@ -12,10 +12,10 @@
 
 		function DefaultStyleSheetDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var originalElementClone = transclude();
-			scope.$watch(function(){ return Template.getStyleSheets();}, processElement);
+			scope.$watch(function(){ return Template.styleSheets();}, processElement);
 			
 			function processElement() {
-				if(Template.getStyleSheets().length === 0) {
+				if(Template.styleSheets().length === 0) {
 					element.after(originalElementClone);
 					return;
 				}

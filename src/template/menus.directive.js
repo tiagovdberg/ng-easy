@@ -12,14 +12,14 @@
 
 		function MenusDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var dynamicalyAddedElements = [];
-			scope.$watch(function(){ return Template.isMenuVisible();}, processElements);
+			scope.$watch(function(){ return Template.menuVisible();}, processElements);
 			
 			function processElements() {
 				dynamicalyAddedElements.forEach(function(dynamicalyAddedElement) {
 					dynamicalyAddedElement.remove();
 				});
 				dynamicalyAddedElements.length = 0;
-				var menus = Template.getMenus();
+				var menus = Template.menus();
 				menus.forEach(function(menu) {
 					var menuWithGoFunction = angular.merge({ go: function() { menuGo(menu) ; } }, menu);
 					var originalElementClone = transclude(function(clone, transcludeScope) {transcludeScope.menu = menuWithGoFunction;});

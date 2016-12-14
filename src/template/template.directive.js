@@ -17,11 +17,11 @@
 		};
 		
 		function TemplateDirectiveLink(scope, element, attrs) {
-			Template.setTitle(scope.title || '');
-			Template.setBreadCrumbs(scope.breadCrumbs || []);
-			Template.setStyleSheets(scope.styleSheets || []);
-			Template.setScripts(scope.scripts || []);
-			Template.setMenuVisible((typeof scope.menuVisible !== 'undefined') ? scope.menuVisible : true);
+			Template.title(scope.title || '');
+			Template.breadCrumbs(scope.breadCrumbs || []);
+			Template.styleSheets(scope.styleSheets || []);
+			Template.scripts(scope.scripts || []);
+			Template.menuVisible((typeof scope.menuVisible !== 'undefined') ? scope.menuVisible : true);
 		}
 	}
 })();	

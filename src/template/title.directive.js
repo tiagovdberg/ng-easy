@@ -15,10 +15,10 @@
 			var isElement = (originalElementClone.prop('tagName') === 'NG-EASY:TITLE');
 			var titleElement = isElement ? angular.element(document.createElement('title')) : originalElementClone;
 
-			scope.$watch(function(){ return Template.getTitle();}, processElement);
+			scope.$watch(function(){ return Template.title();}, processElement);
 			
 			function processElement() {
-				var titleValue = Template.getTitle();
+				var titleValue = Template.title();
 				if(titleValue !== '') {
 					titleElement.text(titleValue);
 					element.after(titleElement);

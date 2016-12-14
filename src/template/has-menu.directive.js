@@ -12,10 +12,10 @@
 
 		function HasMenuDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var originalElementClone = transclude();
-			scope.$watch(function(){ return Template.isMenuVisible();}, processElement);
+			scope.$watch(function(){ return Template.menuVisible();}, processElement);
 			
 			function processElement() {
-				if(Template.isMenuVisible()) {
+				if(Template.menuVisible()) {
 					element.after(originalElementClone);
 					return;
 				}

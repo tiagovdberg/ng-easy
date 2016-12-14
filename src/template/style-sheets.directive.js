@@ -17,14 +17,14 @@
 
 		function StyleSheetsDirectiveLink(scope, element, attrs, ctrl, transclude) {
 			var dynamicalyAddedElements = [];
-			scope.$watch(function(){ return Template.getStyleSheets();}, processElements);
+			scope.$watch(function(){ return Template.styleSheets();}, processElements);
 			
 			function processElements() {
 				dynamicalyAddedElements.forEach(function(dynamicalyAddedElement) {
 					dynamicalyAddedElement.remove();
 				});
 				dynamicalyAddedElements.length = 0;
-				var styleSheets = Template.getStyleSheets();
+				var styleSheets = Template.styleSheets();
 				styleSheets.forEach(function(styleSheet) {
 					var styleSheetElementClone = styleSheetElement.clone();
 					styleSheetElementClone.attr('href', styleSheet);
