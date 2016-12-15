@@ -146,6 +146,9 @@
 
 			function initInjectionMethod() {
 				var self = this;
+				self['$$' + angular.easy.$moduleName] = {};
+				self['$$' + angular.easy.$moduleName].config = configValue;
+				self['$$' + angular.easy.$moduleName].effectiveConfig = effectiveConfig;
 				$injector = initInjectionMethod.caller.arguments[injectorArgumentIndex];
 
 				if (typeof self.status === 'undefined') {
