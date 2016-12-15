@@ -39,7 +39,9 @@
 			}
 		}
 	}
+
 	
+	Messages.$inject = [];
 	function Messages(messagesMap) {
 		var //const
 			FATAL = 'fatal',
