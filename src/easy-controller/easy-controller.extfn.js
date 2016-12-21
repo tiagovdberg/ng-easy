@@ -4,6 +4,7 @@
 
 (function() {
 	var //const
+		UNDEFINED = 'undefined',
 		CONTROLLERDEFAULTSUFFIXES = ['Controller', 'Ctrl', 'Ctl'],
 		CONTROLLERSCOPEVARIABLENAMESUFFIX = 'Ctrl',
 		METHODSPREFIX_DEFAULT_SERVICE_PUT = [ 'create', 'update', 'save', 'replace', 'put' ],
@@ -25,8 +26,10 @@
 			METHODSPREFIX_SHOW
 		);
 
-	angular.easy.easyController = easyController;
-	angular.easy.registerFunction('easyController', easyController);
+	var angularEasy = angular.easy;
+
+	angularEasy.easyController = easyController;
+	angularEasy.registerFunction('easyController', easyController);
 	
 	function easyController(moduleName, config) {
 		var moduleNameValue = evalFunctionOrValue(moduleName);
@@ -39,6 +42,8 @@
 			var configValue = evalFunctionOrValue(config);
 			validateConfigIsObjectAndMustBeNotEmpty(configValue);
 			var effectiveConfig = getEffectiveConfig(moduleNameValue, configValue);
+			var effectiveConfigControllerPrototype = effectiveConfig.controller.prototype;
+			var effectiveConfigStatus = effectiveConfig.status;
 
 			var $injector;
 			var injectorArgumentIndex;
@@ -51,13 +56,13 @@
 			injectAndInitializeStatusAndModelAndData();
 			injectInexistentModelAndDataAndTemplateAcessors();
 			injectInexistentStatusMethods(effectiveConfig);
-			if(typeof effectiveConfig.messages !== 'undefined') {
+			if(typeof effectiveConfig.messages !== UNDEFINED) {
 				MessagesProvider.addMessagesMap(effectiveConfig.messages);
 			}
 			return;
 
 			function registerController() {
-				if(typeof effectiveConfig.controller.$inject === 'undefined') {
+				if(typeof effectiveConfig.controller.$inject === UNDEFINED) {
 					effectiveConfig.controller.$inject =[];
 				}
 				injectorArgumentIndex = effectiveConfig.controller.$inject.length;
@@ -73,15 +78,15 @@
 					template : '<ng:include src="' + effectiveConfig.controllerAs + '.getTemplateUrl()"></ng:include>'
 				};
 				
-				if(typeof effectiveConfig.route !== 'undefined') {
+				if(typeof effectiveConfig.route !== UNDEFINED) {
 					$routeProvider.when(effectiveConfig.route, controllerRouteConfig);
 				} else {
-					for (var statusName in effectiveConfig.status) {
-						if (!effectiveConfig.status.hasOwnProperty(statusName)) {
+					for (var statusName in effectiveConfigStatus) {
+						if (!effectiveConfigStatus.hasOwnProperty(statusName)) {
 							continue;
 						}
-						var status = effectiveConfig.status[statusName];
-						if (typeof status.route === 'undefined') {
+						var status = effectiveConfigStatus[statusName];
+						if (typeof status.route === UNDEFINED) {
 							continue;
 						}
 						var route = effectiveConfig.routeBase + status.route;
@@ -91,67 +96,67 @@
 			}
 
 			function injectInitMethod() {
-				effectiveConfig.controller.prototype.init = initInjectionMethod;
+				effectiveConfigControllerPrototype.init = initInjectionMethod;
 			}
 			
 			function injectAndInitializeStatusAndModelAndData() {
-				if (typeof effectiveConfig.controller.prototype.model === 'undefined') {
-					effectiveConfig.controller.prototype.model = {};
+				if (typeof effectiveConfigControllerPrototype.model === UNDEFINED) {
+					effectiveConfigControllerPrototype.model = {};
 				}
 
-				if (typeof effectiveConfig.controller.prototype.data === 'undefined') {
-					effectiveConfig.controller.prototype.data = {};
+				if (typeof effectiveConfigControllerPrototype.data === UNDEFINED) {
+					effectiveConfigControllerPrototype.data = {};
 				}
 				
-				for (var statusName in effectiveConfig.status) {
-					if (!effectiveConfig.status.hasOwnProperty(statusName)) {
+				for (var statusName in effectiveConfigStatus) {
+					if (!effectiveConfigStatus.hasOwnProperty(statusName)) {
 						continue;
 					}
-					var status = effectiveConfig.status[statusName];
-					if (typeof effectiveConfig.controller.prototype.model[statusName] === 'undefined') {
-						effectiveConfig.controller.prototype.model[statusName] = {};
+					var status = effectiveConfigStatus[statusName];
+					if (typeof effectiveConfigControllerPrototype.model[statusName] === UNDEFINED) {
+						effectiveConfigControllerPrototype.model[statusName] = {};
 					}
-					if (typeof effectiveConfig.controller.prototype.data[statusName] === 'undefined') {
-						effectiveConfig.controller.prototype.data[statusName] = {};
+					if (typeof effectiveConfigControllerPrototype.data[statusName] === UNDEFINED) {
+						effectiveConfigControllerPrototype.data[statusName] = {};
 					}
 				}
 			}
 
 			function injectInexistentModelAndDataAndTemplateAcessors() {
-				if (typeof effectiveConfig.controller.prototype.getModel === 'undefined') {
-					effectiveConfig.controller.prototype.getModel = getModelInjectionMethod;
+				if (typeof effectiveConfigControllerPrototype.getModel === UNDEFINED) {
+					effectiveConfigControllerPrototype.getModel = getModelInjectionMethod;
 				}
 
-				if (typeof effectiveConfig.controller.prototype.getData === 'undefined') {
-					effectiveConfig.controller.prototype.getData = getDataInjectionMethod;
+				if (typeof effectiveConfigControllerPrototype.getData === UNDEFINED) {
+					effectiveConfigControllerPrototype.getData = getDataInjectionMethod;
 				}
 
-				if (typeof effectiveConfig.controller.prototype.getTemplateUrl === 'undefined') {
-					effectiveConfig.controller.prototype.getTemplateUrl = angular.easy.bind(getTemplateUrlInjectionMethod, effectiveConfig);
+				if (typeof effectiveConfigControllerPrototype.getTemplateUrl === UNDEFINED) {
+					effectiveConfigControllerPrototype.getTemplateUrl = angularEasy.bind(getTemplateUrlInjectionMethod, effectiveConfig);
 				}
 			}
 			
 			function injectInexistentStatusMethods() {
-				for (var statusName in effectiveConfig.status) {
-					if (!effectiveConfig.status.hasOwnProperty(statusName)) {
+				for (var statusName in effectiveConfigStatus) {
+					if (!effectiveConfigStatus.hasOwnProperty(statusName)) {
 						continue;
 					}
-					if(typeof effectiveConfig.controller.prototype[statusName] !== 'undefined') {
+					if(typeof effectiveConfigControllerPrototype[statusName] !== UNDEFINED) {
 						continue;
 					}
 
-					effectiveConfig.controller.prototype[statusName] = angular.easy.bind(statusInjectionMethod, effectiveConfig, statusName);
+					effectiveConfigControllerPrototype[statusName] = angularEasy.bind(statusInjectionMethod, effectiveConfig, statusName);
 				}
 			}
 
 			function initInjectionMethod() {
 				var self = this;
-				self['$$' + angular.easy.$moduleName] = {};
-				self['$$' + angular.easy.$moduleName].config = configValue;
-				self['$$' + angular.easy.$moduleName].effectiveConfig = effectiveConfig;
+				self['$$' + angularEasy.$moduleName] = {};
+				self['$$' + angularEasy.$moduleName].config = configValue;
+				self['$$' + angularEasy.$moduleName].effectiveConfig = effectiveConfig;
 				$injector = initInjectionMethod.caller.arguments[injectorArgumentIndex];
 
-				if (typeof self.status === 'undefined') {
+				if (typeof self.status === UNDEFINED) {
 					self[effectiveConfig.initialStatus]();
 				}
 				return;
@@ -169,7 +174,7 @@
 
 			function getTemplateUrlInjectionMethod(effectiveConfig) {
 				var self = this;
-				return effectiveConfig.templateBaseUrl + evalFunctionOrValue(effectiveConfig.status[self.status].templateUrl);
+				return effectiveConfig.templateBaseUrl + evalFunctionOrValue(effectiveConfigStatus[self.status].templateUrl);
 			}
 
 			function statusInjectionMethod(effectiveConfig, newStatusName, form) {
@@ -177,26 +182,26 @@
 
 				$injector.get('Messages').clearMessages();
 				
-				if ((typeof form !== 'undefined') && $injector.get('Messages').formErrors(self.getTemplateUrl(), form)) {
+				if ((typeof form !== UNDEFINED) && $injector.get('Messages').formErrors(self.getTemplateUrl(), form)) {
 					return;
 				}
 
 				var oldStatusName = self.status;
 				self.status = newStatusName;
 
-				var serviceMethod = evalFunctionOrValue(effectiveConfig.status[newStatusName].serviceMethod);
-				if(typeof serviceMethod === 'undefined') {
+				var serviceMethod = evalFunctionOrValue(effectiveConfigStatus[newStatusName].serviceMethod);
+				if(typeof serviceMethod === UNDEFINED) {
 					return;
 				}
 				
-				var serviceUrl = (typeof effectiveConfig.status[newStatusName].serviceUrl !== 'undefined') ? 
-						$injector.get('Urls').getBaseUrl() + evalFunctionOrValue(effectiveConfig.status[newStatusName].serviceUrl) : 
+				var serviceUrl = (typeof effectiveConfigStatus[newStatusName].serviceUrl !== UNDEFINED) ? 
+						$injector.get('Urls').getBaseUrl() + evalFunctionOrValue(effectiveConfigStatus[newStatusName].serviceUrl) : 
 						$injector.get('Urls').serviceUrl();
 				//FIXME Move to getEffectiveStatusSuccessFn and getEffectiveStatusFailFn 
-				var successFn = (typeof effectiveConfig.status[newStatusName].success !== 'undefined') ? effectiveConfig.status[newStatusName].success : ServiceSuccessPrototype;  
-				var failFn = (typeof effectiveConfig.status[newStatusName].fail !== 'undefined') ? effectiveConfig.status[newStatusName].fail : ServiceFailPrototype;
+				var successFn = (typeof effectiveConfigStatus[newStatusName].success !== UNDEFINED) ? effectiveConfigStatus[newStatusName].success : ServiceSuccessPrototype;  
+				var failFn = (typeof effectiveConfigStatus[newStatusName].fail !== UNDEFINED) ? effectiveConfigStatus[newStatusName].fail : ServiceFailPrototype;
 				
-				var loading = evalFunctionOrValue(effectiveConfig.status[newStatusName].loading);
+				var loading = evalFunctionOrValue(effectiveConfigStatus[newStatusName].loading);
 				$injector.get('Loading').startLoading(loading);
 				$injector.get('$http')({
 					method: serviceMethod,
@@ -209,12 +214,12 @@
 
 				//TODO model and data must accept functions with response as argument.
 				function ServiceSuccessPrototype(response) {
-					var statusOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].statusOnSuccess);
+					var statusOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].statusOnSuccess);
 					self.data[statusOnSuccess] = response.data;
 
 					
-					var modelOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].modelOnSuccess);
-					if(typeof modelOnSuccess !== 'undefined') {
+					var modelOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].modelOnSuccess);
+					if(typeof modelOnSuccess !== UNDEFINED) {
 						self.model[statusOnSuccess] = modelOnSuccess;
 					}
 
@@ -223,14 +228,14 @@
 						self[statusOnSuccess]();
 					}
 
-					var locationOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].locationOnSuccess);
-					if(typeof locationOnSuccess !== 'undefined') {
+					var locationOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].locationOnSuccess);
+					if(typeof locationOnSuccess !== UNDEFINED) {
 						$injector.get('$location').url(locationOnSuccess);
 					}
 					
-					var messageOnSuccess = evalFunctionOrValue(effectiveConfig.status[newStatusName].messageOnSuccess);
+					var messageOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].messageOnSuccess);
 					if(messageOnSuccess) {
-						if(typeof locationOnSuccess !== 'undefined') {
+						if(typeof locationOnSuccess !== UNDEFINED) {
 							messageOnSuccess.persistent = true;
 						}
 						$injector.get('Messages').addMessage(messageOnSuccess);
@@ -238,10 +243,10 @@
 				}
 				
 				function ServiceFailPrototype(response) {
-					var statusOnFail = evalFunctionOrValue(effectiveConfig.status[newStatusName].statusOnFail);
+					var statusOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].statusOnFail);
 
-					var modelOnFail = evalFunctionOrValue(effectiveConfig.status[newStatusName].modelOnFail);
-					if(typeof modelOnFail !== 'undefined') {
+					var modelOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].modelOnFail);
+					if(typeof modelOnFail !== UNDEFINED) {
 						self.model[statusOnFail] = modelOnFail;
 					}
 
@@ -250,13 +255,13 @@
 					} else {
 						self.status = statusOnFail;
 					}
-					var locationOnFail = evalFunctionOrValue(effectiveConfig.status[newStatusName].locationOnFail);
-					var hasLocationOnFail = (typeof locationOnFail !== 'undefined');
+					var locationOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].locationOnFail);
+					var hasLocationOnFail = (typeof locationOnFail !== UNDEFINED);
 					if(response.status != 401 && hasLocationOnFail) {
 						$injector.get('$location').url(locationOnFail);
 					}
 					$injector.get('Messages').handleErrors(response);
-					var messageOnFail = evalFunctionOrValue(effectiveConfig.status[newStatusName].messageOnFail);
+					var messageOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].messageOnFail);
 					if(messageOnFail) {
 						$injector.get('Messages').addMessage(messageOnFail);
 					}
@@ -282,25 +287,25 @@
 	}
 	
 	function getEffectiveConfig(moduleName, config) {
-		var effectiveConfig = {};
+		var localEffectiveConfig = {};
 		validateControllerNameEvaluationPossible(config);
-		effectiveConfig.controller = getEffectiveController(); 
-		effectiveConfig.controllerName = getEffectiveControllerName();
-		effectiveConfig.configureRoutes = getEffectiveConfigureRoutes();
-		validateRouteConfig(config, effectiveConfig.configureRoutes);
-		if(effectiveConfig.configureRoutes === true) {
-			effectiveConfig.controllerAs = getEffectiveControllerScopeVariableName();
-			effectiveConfig.route = getEffectiveRoute();
-			effectiveConfig.routeBase = getEffectiveRouteBase();
+		localEffectiveConfig.controller = getEffectiveController(); 
+		localEffectiveConfig.controllerName = getEffectiveControllerName();
+		localEffectiveConfig.configureRoutes = getEffectiveConfigureRoutes();
+		validateRouteConfig(config, localEffectiveConfig.configureRoutes);
+		if(localEffectiveConfig.configureRoutes === true) {
+			localEffectiveConfig.controllerAs = getEffectiveControllerScopeVariableName();
+			localEffectiveConfig.route = getEffectiveRoute();
+			localEffectiveConfig.routeBase = getEffectiveRouteBase();
 		}
-		effectiveConfig.templateBaseUrl = getEffectiveTemplateBaseUrl();
-		effectiveConfig.status = getEffectiveStatuses();
-		effectiveConfig.initialStatus = getEffectiveInitialStatus();
-		effectiveConfig.messages = getEffectiveMessages();
-		return effectiveConfig;
+		localEffectiveConfig.templateBaseUrl = getEffectiveTemplateBaseUrl();
+		localEffectiveConfig.status = getEffectiveStatuses();
+		localEffectiveConfig.initialStatus = getEffectiveInitialStatus();
+		localEffectiveConfig.messages = getEffectiveMessages();
+		return localEffectiveConfig;
 	
 		function getEffectiveController() {
-			if (typeof config.controller === 'undefined') {
+			if (typeof config.controller === UNDEFINED) {
 				var controller = function() {
 					var self = this; 
 					self.init();					
@@ -311,53 +316,53 @@
 		}
 		
 		function getEffectiveControllerName() {
-			return (typeof config.controllerName !== 'undefined') ? 
+			return (typeof config.controllerName !== UNDEFINED) ? 
 				evalFunctionOrValue(config.controllerName) : 
 				config.controller.name;
 		}
 
 		function getEffectiveConfigureRoutes() {
-			if (typeof config.configureRoutes !== 'undefined') {
+			if (typeof config.configureRoutes !== UNDEFINED) {
 				return evalFunctionOrValue(config.configureRoutes);
 			}
 			return true;
 		}
 
 		function getEffectiveControllerScopeVariableName() {
-			return (typeof config.controllerAs !== 'undefined') ? 
+			return (typeof config.controllerAs !== UNDEFINED) ? 
 				evalFunctionOrValue(config.controllerAs) : 
-				transformControllerNameToControllerScopeVariableName(effectiveConfig.controllerName);
+				transformControllerNameToControllerScopeVariableName(localEffectiveConfig.controllerName);
 		}
 
 		function getEffectiveRoute() {
-			if (typeof config.route !== 'undefined') {
+			if (typeof config.route !== UNDEFINED) {
 				return evalFunctionOrValue(config.route);
 			}
-			if (typeof config.routeBase !== 'undefined') {
+			if (typeof config.routeBase !== UNDEFINED) {
 				return; //undefined
 			}
-			return '/' + transformControllerNameToHtmlName(effectiveConfig.controllerName);
+			return '/' + transformControllerNameToHtmlName(localEffectiveConfig.controllerName);
 		}
 		
 		function getEffectiveRouteBase() {
-			if (typeof config.routeBase !== 'undefined') {
+			if (typeof config.routeBase !== UNDEFINED) {
 				return evalFunctionOrValue(config.routeBase);
 			}
 			return; //undefined
 		}
 		
 		function getEffectiveTemplateBaseUrl() {
-			return (typeof config.templateBaseUrl !== 'undefined') ? 
+			return (typeof config.templateBaseUrl !== UNDEFINED) ? 
 				evalFunctionOrValue(config.templateBaseUrl) : 
-				transformFeatureNameToHtmlName(moduleName) + '/' + transformControllerNameToHtmlName(effectiveConfig.controllerName);
+				transformFeatureNameToHtmlName(moduleName) + '/' + transformControllerNameToHtmlName(localEffectiveConfig.controllerName);
 		}
 		
 		//TODO Route user featurename without prefix. Default Status name with prefix
 		function getEffectiveStatuses() {
 			var effectiveStatuses = {};
 			var statusesValue = evalFunctionOrValue(config.status);
-			if (typeof statusesValue === 'undefined') {
-				var singleStatusName = transformControllerNameToFeatureName(effectiveConfig.controllerName);
+			if (typeof statusesValue === UNDEFINED) {
+				var singleStatusName = transformControllerNameToFeatureName(localEffectiveConfig.controllerName);
 				effectiveStatuses[singleStatusName] = getEffectiveStatus(singleStatusName, {});
 				return effectiveStatuses;
 			}
@@ -372,11 +377,11 @@
 		}
 
 		function getEffectiveInitialStatus() {
-			if(typeof config.initialStatus !== 'undefined') {
+			if(typeof config.initialStatus !== UNDEFINED) {
 				return evalFunctionOrValue(config.initialStatus);
 			}
-			if (typeof config.status === 'undefined') {
-				return transformControllerNameToFeatureName(effectiveConfig.controllerName);
+			if (typeof config.status === UNDEFINED) {
+				return transformControllerNameToFeatureName(localEffectiveConfig.controllerName);
 			}
 			return;
 		}
@@ -387,7 +392,7 @@
 		
 		function getEffectiveStatus(statusName, status) {
 			var effectiveStatus = {};
-			if(effectiveConfig.configureRoutes === true) {
+			if(localEffectiveConfig.configureRoutes === true) {
 				effectiveStatus.route = getEffectiveStatusRoute(statusName, status);
 			}
 			effectiveStatus.templateUrl = getEffectiveStatusTemplateUrl(statusName, status);
@@ -406,29 +411,29 @@
 		}		
 		
 		function getEffectiveStatusRoute(statusName, status) {
-			if(typeof status.route !== 'undefined') {
+			if(typeof status.route !== UNDEFINED) {
 				return evalFunctionOrValue(status.route);
 			}
-			if(typeof effectiveConfig.route != 'undefined') {
+			if(typeof localEffectiveConfig.route != UNDEFINED) {
 				return;
 			}
 			return '/' + transformStatusNameToHtmlName(statusName);
 		}
 
 		function getEffectiveStatusTemplateUrl(statusName, status) {
-			return (typeof status.templateUrl !== 'undefined')  ?
+			return (typeof status.templateUrl !== UNDEFINED)  ?
 				status.templateUrl : 
 				'/' + transformStatusNameToHtmlName(statusName) + '.html';
 		}
 
 		function getEffectiveStatusLoading(statusName, status) {
-			return (typeof status.loading !== 'undefined')  ?
+			return (typeof status.loading !== UNDEFINED)  ?
 				status.loading : 
 				'global';
 		}
 		
 		function getEffectiveStatusServiceMethod(statusName, status) {
-			if(typeof status.serviceMethod !== 'undefined') {
+			if(typeof status.serviceMethod !== UNDEFINED) {
 				return status.serviceMethod;
 			}
 			
@@ -457,13 +462,13 @@
 		}
 		
 		function getEffectiveStatusStatusOnSuccess(statusName, status) {
-			return (typeof status.statusOnSuccess !== 'undefined') ?
+			return (typeof status.statusOnSuccess !== UNDEFINED) ?
 				status.statusOnSuccess :
 				statusName;
 		}
 
 		function getEffectiveStatusStatusOnFail(statusName, status) {
-			return (typeof status.statusOnFail !== 'undefined') ?
+			return (typeof status.statusOnFail !== UNDEFINED) ?
 				status.statusOnFail :
 				statusName;
 		}
@@ -501,9 +506,9 @@
 	}
 
 	function validateControllerNameEvaluationPossible(config) {
-		var undefinedControllerName = (typeof config.controllerName === 'undefined');
-		var undefinedControllerFunction = (typeof config.controller === 'undefined');
-		var undefinedControllerFunctionName = undefinedControllerFunction || (typeof config.controller.name === 'undefined');
+		var undefinedControllerName = (typeof config.controllerName === UNDEFINED);
+		var undefinedControllerFunction = (typeof config.controller === UNDEFINED);
+		var undefinedControllerFunctionName = undefinedControllerFunction || (typeof config.controller.name === UNDEFINED);
 		if (undefinedControllerName && undefinedControllerFunctionName) {
 			throw 'Controller name evaluation not possible. Use [controllerName] or a name [controller]';
 		}
@@ -514,45 +519,45 @@
 			validateForbiddenRouteConfig(config);
 			return;
 		}
-		if(typeof config.route === 'undefined') {
+		if(typeof config.route === UNDEFINED) {
 			return;
 		}
-		if(typeof config.routeBase !== 'undefined') {
+		if(typeof config.routeBase !== UNDEFINED) {
 			throw '[config.route] and [config.routeBase] are mutually exclusive.';
 		}
 		var statusesValue = evalFunctionOrValue(config.status);
-		if (typeof statusesValue === 'undefined') {
+		if (typeof statusesValue === UNDEFINED) {
 			return;
 		}
 		for (var statusName in statusesValue) {
 			if (!statusesValue.hasOwnProperty(statusName)) {
 				continue;
 			}
-			if(typeof statusesValue[statusName].route !== 'undefined') {
+			if(typeof statusesValue[statusName].route !== UNDEFINED) {
 				throw '[config.route] and [config.status[\'' + statusName + '\'].route] are mutually exclusive.';
 			}
 		}
 	}
 
 	function validateForbiddenRouteConfig(config) {
-		if(typeof config.route !== 'undefined') {
+		if(typeof config.route !== UNDEFINED) {
 			throw '[config.configureRoutes = false] and [config.route] are mutually exclusive.';
 		}
-		if(typeof config.routeBase !== 'undefined') {
+		if(typeof config.routeBase !== UNDEFINED) {
 			throw '[config.configureRoutes = false] and [config.routeBase] are mutually exclusive.';
 		}
-		if(typeof config.controllerAs !== 'undefined') {
+		if(typeof config.controllerAs !== UNDEFINED) {
 			throw '[config.configureRoutes = false] and [config.controllerAs] are mutually exclusive.';
 		}
 		var statusesValue = evalFunctionOrValue(config.status);
-		if (typeof statusesValue === 'undefined') {
+		if (typeof statusesValue === UNDEFINED) {
 			return;
 		}
 		for (var statusName in statusesValue) {
 			if (!statusesValue.hasOwnProperty(statusName)) {
 				continue;
 			}
-			if(typeof statusesValue[statusName].route !== 'undefined') {
+			if(typeof statusesValue[statusName].route !== UNDEFINED) {
 				throw '[config.configureRoutes = false] and [config.status[\'' + statusName + '\'].route] are mutually exclusive.';
 			}
 		}
@@ -566,7 +571,11 @@
 
 	function transformControllerNameToFeatureName(controllerName) {
 		 var name = removeKnowSuffixes(controllerName, CONTROLLERDEFAULTSUFFIXES);
-		 return name.substring(0,1).toLowerCase() + name.substring(1);
+		 return transformToCamelCase;
+	}
+
+	function transformToCamelCase(name) {
+		return name.substring(0,1).toLowerCase() + name.substring(1);
 	}
 
 	function transformControllerNameToHtmlName(controllerName) {
@@ -591,7 +600,7 @@
 
 
 	function validateStatus(config, statusName, varName) {
-		varName = (typeof statusName === 'undefined') ? 'statusName' : varName;
+		varName = (typeof statusName === UNDEFINED) ? 'statusName' : varName;
 		var isString = (typeof statusName === 'string')	|| (statusName instanceof String);
 		var isTrimmedString = isString && (statusName.trim() === statusName);
 		var isEmpty = isString && (statusName.length === 0);
@@ -599,7 +608,7 @@
 			throw '[' + varName + '] must be a trimmed string and must be not empty.';
 		}
 		
-		if((typeof config.status !== 'undefined') && (typeof config.status[statusName] === 'undefined')) {
+		if((typeof config.status !== UNDEFINED) && (typeof config.status[statusName] === UNDEFINED)) {
 			throw '[' + varName + '] = \"' + status + '\" must exists in [config.status]';
 		}
 	}
@@ -611,7 +620,7 @@
 
 	function transformStatusNameToFeatureName(statusName) {
 		var name = removeKnowPrefixes(statusName, KNOWNMETHODSPREFIXES);
-		return name.substring(0,1).toLowerCase() + name.substring(1);
+		return transformToCamelCase;
 	}
 
 	function removeKnowPrefixes(name, knownPrefixes) {
@@ -641,5 +650,5 @@
 			}			
 		}
 		return false;
-	}	
+	}
 })();
