@@ -399,6 +399,8 @@
 			effectiveStatus.loading = getEffectiveStatusLoading(statusName, status);
 			effectiveStatus.serviceMethod = getEffectiveStatusServiceMethod(statusName, status);
 			effectiveStatus.serviceUrl = getEffectiveStatusServiceUrl(statusName, status); 
+			effectiveStatus.success = status.success;
+			effectiveStatus.fail = status.fail;
 			effectiveStatus.statusOnSuccess = getEffectiveStatusStatusOnSuccess(statusName, status);
 			effectiveStatus.statusOnFail = getEffectiveStatusStatusOnFail(statusName, status);
 			effectiveStatus.modelOnSuccess = getEffectiveStatusModelOnSuccess(statusName, status);
@@ -571,7 +573,7 @@
 
 	function transformControllerNameToFeatureName(controllerName) {
 		 var name = removeKnowSuffixes(controllerName, CONTROLLERDEFAULTSUFFIXES);
-		 return transformToCamelCase;
+		 return transformToCamelCase(name);
 	}
 
 	function transformToCamelCase(name) {
@@ -620,7 +622,7 @@
 
 	function transformStatusNameToFeatureName(statusName) {
 		var name = removeKnowPrefixes(statusName, KNOWNMETHODSPREFIXES);
-		return transformToCamelCase;
+		return transformToCamelCase(name);
 	}
 
 	function removeKnowPrefixes(name, knownPrefixes) {
