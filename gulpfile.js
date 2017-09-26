@@ -47,7 +47,7 @@ gulp.task('bump', function () {
 		options.type = 'prerelease';
 	}
 	return gulp
-		.src(['package.json', 'bower.json'])
+		.src(['package.json'])
 		.pipe(bump(options))
 		.pipe(gulp.dest('./'));
 });
