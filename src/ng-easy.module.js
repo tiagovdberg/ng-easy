@@ -1,17 +1,20 @@
-(function() {
-  if(typeof angular.easy === 'undefined') {
+(function() {	
+  var //const
+    UNDEFINED = 'undefined';
+  
+  if(typeof angular.easy === UNDEFINED) {
       angular.easy = {};
   }
 
-  if(typeof angular.easy.$moduleName === 'undefined') {
+  if(typeof angular.easy.$moduleName === UNDEFINED) {
       angular.easy.$moduleName = 'ngEasy';
   }
 
-  if(typeof angular.easy.$directivesPrefix === 'undefined') {
+  if(typeof angular.easy.$directivesPrefix === UNDEFINED) {
       angular.easy.$directivesPrefix = 'ngEasy';
   }
 
-  if(typeof angular.easy.$providersPrefix === 'undefined') {
+  if(typeof angular.easy.$providersPrefix === UNDEFINED) {
       angular.easy.$providersPrefix = '';
   }
 

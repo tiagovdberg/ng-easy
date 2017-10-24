@@ -1,4 +1,7 @@
-(function() {	
+(function() {
+	var //const
+		UNDEFINED = 'undefined';
+
 	angular.module(angular.easy.$moduleName).provider(angular.easy.$providersPrefix + 'Messages', MessagesProvider);
 
 	function MessagesProvider() {
@@ -64,6 +67,7 @@
 		self.clearMessages = clearMessages;
 		self.handleErrors = handleErrors;
 		self.formErrors = formErrors;
+		self.validate = validate;
 		
 		init();
 		
@@ -78,7 +82,7 @@
 		}
 
 		function getMessages(expression) {
-			if((typeof expression === 'undefined') || expression === "*") {
+			if((typeof expression === UNDEFINED) || expression === "*") {
 				return self.messages;
 			}
 			
@@ -86,7 +90,7 @@
 		}
 
 		function addMessage(newMessage) {
-			if((typeof newMessage.id === 'undefined') || (typeof self.messagesMap[newMessage.id] === 'undefined')) {
+			if((typeof newMessage.id === UNDEFINED) || (typeof self.messagesMap[newMessage.id] === UNDEFINED)) {
 				self.messages.push(newMessage);
 				self.changeCount++;
 				return;
@@ -117,7 +121,7 @@
 				type = ERROR;
 			}
 			
-			if(typeof response.data.text !== 'undefined') {
+			if(typeof response.data.text !== UNDEFINED) {
 				addMessage({"id": response.data.text ,"text": response.data.text, "type": type});
 				return;
 			}
@@ -136,12 +140,12 @@
 						var errorType = form.$error[errorTypeName];
 						for(var fieldIndex = 0; fieldIndex < errorType.length; fieldIndex++) {
 							var field = errorType[fieldIndex];
-							if((typeof field.$name !== 'undefined') && field.$name !== "") {
+							if((typeof field.$name !== UNDEFINED) && field.$name !== "") {
 								continue;
 							}
 							hasError = true;
 							var qualifiedGenericError = templateUrl + "." + form.$name + ".$error." + errorTypeName;
-							addMessage({"id": qualifiedGenericError ,"text": qualifiedGenericError, "type": "error"});
+							addMessage({"id": qualifiedGenericError ,"text": qualifiedGenericError, "type": ERROR});
 							continue errorTypeLoop;
 						}
 					}
@@ -154,29 +158,48 @@
 				for(var formFieldError in form[fieldName].$error) {
 					hasError = true;
 					var qualifiedError = templateUrl + "." + form.$name + "." + fieldName + "." + formFieldError;
-					var noParametersQualifiedError = qualifiedError.replace(/\{.*?=.*?\}/, '{}');
-					if(typeof self.messagesMap[noParametersQualifiedError] === 'undefined') {
-						addMessage({"id": qualifiedError ,"text": qualifiedError, "type": "error"});
-						continue;
-					}
-					
-					var rawMessage = self.messagesMap[noParametersQualifiedError];
-					if(qualifiedError === noParametersQualifiedError) {
-						addMessage({"id": qualifiedError ,"text": rawMessage, "type": "error"});
-						continue;
-					}
-					var changedMessage = rawMessage;
-					var regEx = /\{(.*?)=(.*?)\}/g;
-					var regexResult;
-					while ((regexResult = regEx.exec(qualifiedError)) !== null) {
-						var paramName = regexResult[1];
-						var paramValue = regexResult[2];
-						changedMessage = changedMessage.replace("\{" + paramName + "\}", paramValue);
-					}
-					addMessage({"id": qualifiedError ,"text": changedMessage, "type": "error"});
+					addMessage({"id": qualifiedError ,"text": x(qualifiedError, self.messagesMap), "type": ERROR});
 				}
 			}
 			return hasError;
 		}
+
+		function validate(condition, message) {
+			var hasError = evalFunctionOrValue(condition);
+			if (!hasError) {
+				return hasError;
+			}
+			addMessage({"id": message.id ,"text": x(message.id, self.messagesMap), "type": message.type});
+			return hasError;
+		}
+
+		function x(qualifiedError, messagesMap) {
+			var noParametersQualifiedError = qualifiedError.replace(/\{.*?=.*?\}/, '{}');
+			var rawMessage = messagesMap[noParametersQualifiedError];
+			if(typeof rawMessage === UNDEFINED) {
+				return qualifiedError;
+			}
+			
+			if(qualifiedError === noParametersQualifiedError) {
+				return rawMessage;
+			}
+			var changedMessage = rawMessage;
+			var regEx = /\{(.*?)=(.*?)\}/g;
+			var regexResult;
+			while ((regexResult = regEx.exec(qualifiedError)) !== null) {
+				var paramName = regexResult[1];
+				var paramValue = regexResult[2];
+				changedMessage = changedMessage.replace("\{" + paramName + "\}", paramValue);
+			}
+			return changedMessage;
+		}
+
+	}
+
+	function evalFunctionOrValue(functionOrValue) {
+		if ((typeof functionOrValue === 'function') || (functionOrValue instanceof Function)) {
+			return functionOrValue();
+		}
+		return functionOrValue;
 	}
 })();	
