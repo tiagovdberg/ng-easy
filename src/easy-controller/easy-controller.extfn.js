@@ -199,8 +199,8 @@
 						}
 						var status = self[acessor].effectiveConfig.status[statusName];			
 						var routeUrl = effectiveConfig.routeBase + status.route;
-						if(path === currentUrl) {
-							self[route.status]();
+						if(path === routeUrl) {
+							self[statusName]();
 							return;
 						}
 					}
