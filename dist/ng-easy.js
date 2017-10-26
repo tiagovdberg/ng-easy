@@ -1,17 +1,20 @@
-(function() {
-  if(typeof angular.easy === 'undefined') {
+(function() {	
+  var //const
+    UNDEFINED = 'undefined';
+  
+  if(typeof angular.easy === UNDEFINED) {
       angular.easy = {};
   }
 
-  if(typeof angular.easy.$moduleName === 'undefined') {
+  if(typeof angular.easy.$moduleName === UNDEFINED) {
       angular.easy.$moduleName = 'ngEasy';
   }
 
-  if(typeof angular.easy.$directivesPrefix === 'undefined') {
+  if(typeof angular.easy.$directivesPrefix === UNDEFINED) {
       angular.easy.$directivesPrefix = 'ngEasy';
   }
 
-  if(typeof angular.easy.$providersPrefix === 'undefined') {
+  if(typeof angular.easy.$providersPrefix === UNDEFINED) {
       angular.easy.$providersPrefix = '';
   }
 
@@ -45,30 +48,6 @@
   }
 })();
 
-(function() {
-	angular.module(angular.easy.$moduleName)
-		.directive(angular.easy.$directivesPrefix + 'Alias', AliasDirective);
-
-	function AliasDirective() {
-		return {
-			restrict : "EA",
-			link : AliasDirectiveLink
-		};
-
-		function AliasDirectiveLink(scope, element, attrs) {
-			var aliasAndExpressions = attrs.ngEasyAlias.split(';');
-			aliasAndExpressions.forEach(function(aliasAndExpression) {
-				var aliasAndExpressionArray = aliasAndExpression.split('=');
-				if(aliasAndExpressionArray.length != 2) {
-					throw "Alias and/or Expression not valid. Format: {alias} = {expression}";
-				}
-				var alias = aliasAndExpressionArray[0].trim();
-				var expression = aliasAndExpressionArray[1].trim();
-				scope.$watch(function(){ return scope.$eval(expression);}, function(newValue, oldValue) {scope[alias]=newValue;});
-			});
-		}
-	}
-})();
 //TODO Documentation JSDoc
 //TODO Automaticaly start on specific state based on Status route.
 //TODO InitialStatus has a default if there is only one state.
@@ -79,7 +58,7 @@
 		CONTROLLERDEFAULTSUFFIXES = ['Controller', 'Ctrl', 'Ctl'],
 		CONTROLLERSCOPEVARIABLENAMESUFFIX = 'Ctrl',
 		METHODSPREFIX_DEFAULT_SERVICE_PUT = [ 'create', 'update', 'save', 'replace', 'put' ],
-		METHODSPREFIX_DEFAULT_SERVICE_GET = [ 'retrieve', 'load', 'edit', 'get' ],
+		METHODSPREFIX_DEFAULT_SERVICE_GET = [ 'retrieve', 'load', 'edit', 'get', 'new' ],
 		METHODSPREFIX_DEFAULT_SERVICE_DELETE = [ 'delete', 'remove', 'erase' ],
 		METHODSPREFIX_DEFAULT_SERVICE_POST = [ 'add', 'submit', 'send', 'do', 'post' ],
 		METHODSPREFIX_SERVICES = [].concat(
@@ -98,6 +77,7 @@
 		);
 
 	var angularEasy = angular.easy;
+	var acessor = '$' + angularEasy.$moduleName;
 
 	angularEasy.easyController = easyController;
 	angularEasy.registerFunction('easyController', easyController);
@@ -123,9 +103,10 @@
 			if(effectiveConfig.configureRoutes === true) {
 				configureRoutes();			
 			}
+			effectiveConfigControllerPrototype[acessor] = {};
 			injectInitMethod();
-			injectAndInitializeStatusAndModelAndData();
-			injectInexistentModelAndDataAndTemplateAcessors();
+			injectAndInitializeStatusAndModelAndDataAndVars();
+			injectInexistentModelAndDataAndVarsAndTemplateAcessors();
 			injectInexistentStatusMethods(effectiveConfig);
 			if(typeof effectiveConfig.messages !== UNDEFINED) {
 				MessagesProvider.addMessagesMap(effectiveConfig.messages);
@@ -167,10 +148,13 @@
 			}
 
 			function injectInitMethod() {
-				effectiveConfigControllerPrototype.init = initInjectionMethod;
+				effectiveConfigControllerPrototype[acessor].init = initInjectionMethod;
+				if (typeof effectiveConfigControllerPrototype.init === UNDEFINED) {
+					effectiveConfigControllerPrototype.init = initInjectionMethod;
+				}
 			}
 			
-			function injectAndInitializeStatusAndModelAndData() {
+			function injectAndInitializeStatusAndModelAndDataAndVars() {
 				if (typeof effectiveConfigControllerPrototype.model === UNDEFINED) {
 					effectiveConfigControllerPrototype.model = {};
 				}
@@ -178,22 +162,28 @@
 				if (typeof effectiveConfigControllerPrototype.data === UNDEFINED) {
 					effectiveConfigControllerPrototype.data = {};
 				}
-				
+
+				if (typeof effectiveConfigControllerPrototype.vars === UNDEFINED) {
+					effectiveConfigControllerPrototype.vars = {};
+				}
+
 				for (var statusName in effectiveConfigStatus) {
 					if (!effectiveConfigStatus.hasOwnProperty(statusName)) {
 						continue;
 					}
-					var status = effectiveConfigStatus[statusName];
 					if (typeof effectiveConfigControllerPrototype.model[statusName] === UNDEFINED) {
 						effectiveConfigControllerPrototype.model[statusName] = {};
 					}
 					if (typeof effectiveConfigControllerPrototype.data[statusName] === UNDEFINED) {
 						effectiveConfigControllerPrototype.data[statusName] = {};
 					}
+					if (typeof effectiveConfigControllerPrototype.vars[statusName] === UNDEFINED) {
+						effectiveConfigControllerPrototype.vars[statusName] = {};
+					}
 				}
 			}
 
-			function injectInexistentModelAndDataAndTemplateAcessors() {
+			function injectInexistentModelAndDataAndVarsAndTemplateAcessors() {
 				if (typeof effectiveConfigControllerPrototype.getModel === UNDEFINED) {
 					effectiveConfigControllerPrototype.getModel = getModelInjectionMethod;
 				}
@@ -202,35 +192,69 @@
 					effectiveConfigControllerPrototype.getData = getDataInjectionMethod;
 				}
 
+				if (typeof effectiveConfigControllerPrototype.getVars === UNDEFINED) {
+					effectiveConfigControllerPrototype.getVars = getVarsInjectionMethod;
+				}
+
 				if (typeof effectiveConfigControllerPrototype.getTemplateUrl === UNDEFINED) {
-					effectiveConfigControllerPrototype.getTemplateUrl = angularEasy.bind(getTemplateUrlInjectionMethod, effectiveConfig);
+					effectiveConfigControllerPrototype.getTemplateUrl = getTemplateUrlInjectionMethod;
 				}
 			}
 			
 			function injectInexistentStatusMethods() {
+				effectiveConfigControllerPrototype[acessor].methods = {};
 				for (var statusName in effectiveConfigStatus) {
 					if (!effectiveConfigStatus.hasOwnProperty(statusName)) {
 						continue;
 					}
+					effectiveConfigControllerPrototype[acessor].methods[statusName] = angularEasy.bind(statusInjectionMethod, statusName);
 					if(typeof effectiveConfigControllerPrototype[statusName] !== UNDEFINED) {
 						continue;
 					}
-
-					effectiveConfigControllerPrototype[statusName] = angularEasy.bind(statusInjectionMethod, effectiveConfig, statusName);
+					effectiveConfigControllerPrototype[statusName] = effectiveConfigControllerPrototype[acessor].methods[statusName];
 				}
 			}
 
 			function initInjectionMethod() {
 				var self = this;
-				self['$$' + angularEasy.$moduleName] = {};
-				self['$$' + angularEasy.$moduleName].config = configValue;
-				self['$$' + angularEasy.$moduleName].effectiveConfig = effectiveConfig;
+				self[acessor].config = configValue;
+				self[acessor].effectiveConfig = effectiveConfig;
 				$injector = initInjectionMethod.caller.arguments[injectorArgumentIndex];
+				var $route = $injector.get('$route');
+				self[acessor].routes = $route.routes;
 
-				if (typeof self.status === UNDEFINED) {
-					self[effectiveConfig.initialStatus]();
+				var $location = $injector.get('$location');
+				var currentUrl = $locarion.url();
+
+				if (typeof self.status !== UNDEFINED) {
+					return;
 				}
-				return;
+
+				if(typeof effectiveConfig.initialStatus !== UNDEFINED) {
+					self[effectiveConfig.initialStatus]();
+					return;
+				}
+				
+				for (var path in self[acessor].routes) {
+					if (!self[acessor].routes.hasOwnProperty(path)) {
+						continue;
+					}
+					var route = self[acessor].routes[path];
+					if(!route.regexp.exec(currentUrl)) {
+						continue;
+					}
+					for (var statusName in self[acessor].effectiveConfig.status) {
+						if (!self[acessor].effectiveConfig.status.hasOwnProperty(statusName)) {
+							continue;
+						}
+						var status = self[acessor].effectiveConfig.status[statusName];			
+						var routeUrl = effectiveConfig.routeBase + status.route;
+						if(path === currentUrl) {
+							self[route.status]();
+							return;
+						}
+					}
+				}					
 			}
 			
 			function getModelInjectionMethod() {
@@ -243,21 +267,30 @@
 				return self.data[self.status];
 			}
 
-			function getTemplateUrlInjectionMethod(effectiveConfig) {
+			function getVarsInjectionMethod() {
+				var self = this;
+				return self.vars[self.status];
+			}
+
+			function getTemplateUrlInjectionMethod() {
 				var self = this;
 				return effectiveConfig.templateBaseUrl + evalFunctionOrValue(effectiveConfigStatus[self.status].templateUrl);
 			}
 
-			function statusInjectionMethod(effectiveConfig, newStatusName, form) {
+			function statusInjectionMethod(newStatusName, form) {
 				var self = this;
 
-				$injector.get('Messages').clearMessages();
+				var Messages = $injector.get('Messages');
+				Messages.clearMessages();
 				
-				if ((typeof form !== UNDEFINED) && $injector.get('Messages').formErrors(self.getTemplateUrl(), form)) {
+				if ((typeof form !== UNDEFINED) && Messages.formErrors(self.getTemplateUrl(), form)) {
 					return;
 				}
 
 				var oldStatusName = self.status;
+				if(typeof oldStatusName === UNDEFINED) {
+					oldStatusName = newStatusName;
+				}
 				self.status = newStatusName;
 
 				var serviceMethod = evalFunctionOrValue(effectiveConfigStatus[newStatusName].serviceMethod);
@@ -309,7 +342,7 @@
 						if(typeof locationOnSuccess !== UNDEFINED) {
 							messageOnSuccess.persistent = true;
 						}
-						$injector.get('Messages').addMessage(messageOnSuccess);
+						Messages.addMessage(messageOnSuccess);
 					}
 				}
 				
@@ -331,10 +364,10 @@
 					if(response.status != 401 && hasLocationOnFail) {
 						$injector.get('$location').url(locationOnFail);
 					}
-					$injector.get('Messages').handleErrors(response);
+					Messages.handleErrors(response);
 					var messageOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].messageOnFail);
 					if(messageOnFail) {
-						$injector.get('Messages').addMessage(messageOnFail);
+						Messages.addMessage(messageOnFail);
 					}
 				}
 			}
@@ -451,9 +484,16 @@
 			if(typeof config.initialStatus !== UNDEFINED) {
 				return evalFunctionOrValue(config.initialStatus);
 			}
+			if (typeof config.routeBase !== UNDEFINED) {
+				return;
+			}
 			if (typeof config.status === UNDEFINED) {
 				return transformControllerNameToFeatureName(localEffectiveConfig.controllerName);
 			}
+			if (Object.keys(config.status).length === 1) {
+				return transformControllerNameToFeatureName(Object.keys(config.status)[0]);
+			}
+			//TODO Handle single status name
 			return;
 		}
 		
@@ -527,7 +567,7 @@
 				return;
 			}
 			
-			return 'GET';
+			return;
 		}
 		
 		function getEffectiveStatusServiceUrl(statusName, status) {
@@ -727,114 +767,6 @@
 })();
 (function() {
 	angular.module(angular.easy.$moduleName)
-		.directive(angular.easy.$directivesPrefix + 'IsLoading', IsLoadingDirective);
-
-	IsLoadingDirective.$inject=['Loading'];
-	function IsLoadingDirective(Loading) {
-		return {
-			restrict: 'EA',
-			link : IsLoadingDirectiveLink
-		};
-
-		function IsLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
-			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
-			
-			function processElement() {
-				var loadingExpressions = attrs.ngEasyIsLoading.split(';');
-				var isLoading = false;
-				loadingExpressions.forEach(function(loadingExpression) {
-					var loadings = Loading.getLoadings(loadingExpression);
-					isLoading = isLoading || (loadings.length > 0); 
-				});
-				if(isLoading) {
-					element.prop('style').removeProperty('display');
-					return;
-				}
-				element.prop('style').display = 'none';
-			}
-		}
-	}
-		
-})();
-(function() {	
-	angular.module(angular.easy.$moduleName).service(angular.easy.$providersPrefix + 'Loading', LoadingService);
-
-	function LoadingService() {
-		var self = this;
-
-		self.getChangeCount = getChangeCount;
-		self.getLoadings = getLoadings;
-		self.startLoading = startLoading;
-		self.stopLoading = stopLoading;
-		
-		init();
-		
-		function init() {
-			self.loadings = [];
-			self.changeCount = 0;
-		}
-
-		function getChangeCount() {
-			return self.changeCount;
-		}
-
-		function getLoadings(expression) {
-			if((typeof expression === 'undefined') || expression === "*") {
-				return self.loadings;
-			}
-			
-			return angular.easy.$$filterElements(self.loadings, expression);
-		}
-
-		function startLoading(loadingId) {
-			self.loadings.push(loadingId);
-			self.changeCount++;
-		}
-
-		function stopLoading(loadingId) {
-			var index = self.loadings.indexOf(loadingId);
-			if(index === -1) {
-				return;
-			}
-			self.loadings.splice(index, 1);
-			self.changeCount++;
-		}
-		
-	}
-})();	
-(function() {
-	angular.module(angular.easy.$moduleName)
-		.directive(angular.easy.$directivesPrefix + 'NotLoading', NotLoadingDirective);
-
-	NotLoadingDirective.$inject=['Loading'];
-	function NotLoadingDirective(Loading) {
-		return {
-			restrict: 'EA',
-			link : NotLoadingDirectiveLink
-		};
-
-		function NotLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
-			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
-			
-			function processElement() {
-				var loadingExpressions = attrs.ngEasyNotLoading.split(';');
-				var isLoading = false;
-				loadingExpressions.forEach(function(loadingExpression) {
-					var loadings = Loading.getLoadings(loadingExpression);
-					isLoading = isLoading || (loadings.length > 0); 
-				});
-				if(isLoading) {
-					element.prop('style').display = 'none';
-					return;
-				}
-				element.prop('style').removeProperty('display');
-			}
-		}
-	}
-		
-})();
-(function() {
-	angular.module(angular.easy.$moduleName)
 		.directive(angular.easy.$directivesPrefix + 'HasMessages', HasMessagesDirective);
 
 	HasMessagesDirective.$inject=['Messages'];
@@ -947,7 +879,10 @@
 	}
 		
 })();
-(function() {	
+(function() {
+	var //const
+		UNDEFINED = 'undefined';
+
 	angular.module(angular.easy.$moduleName).provider(angular.easy.$providersPrefix + 'Messages', MessagesProvider);
 
 	function MessagesProvider() {
@@ -1013,6 +948,7 @@
 		self.clearMessages = clearMessages;
 		self.handleErrors = handleErrors;
 		self.formErrors = formErrors;
+		self.validate = validate;
 		
 		init();
 		
@@ -1027,7 +963,7 @@
 		}
 
 		function getMessages(expression) {
-			if((typeof expression === 'undefined') || expression === "*") {
+			if((typeof expression === UNDEFINED) || expression === "*") {
 				return self.messages;
 			}
 			
@@ -1035,7 +971,7 @@
 		}
 
 		function addMessage(newMessage) {
-			if((typeof newMessage.id === 'undefined') || (typeof self.messagesMap[newMessage.id] === 'undefined')) {
+			if((typeof newMessage.id === UNDEFINED) || (typeof self.messagesMap[newMessage.id] === UNDEFINED)) {
 				self.messages.push(newMessage);
 				self.changeCount++;
 				return;
@@ -1066,7 +1002,7 @@
 				type = ERROR;
 			}
 			
-			if(typeof response.data.text !== 'undefined') {
+			if(typeof response.data.text !== UNDEFINED) {
 				addMessage({"id": response.data.text ,"text": response.data.text, "type": type});
 				return;
 			}
@@ -1085,12 +1021,12 @@
 						var errorType = form.$error[errorTypeName];
 						for(var fieldIndex = 0; fieldIndex < errorType.length; fieldIndex++) {
 							var field = errorType[fieldIndex];
-							if((typeof field.$name !== 'undefined') && field.$name !== "") {
+							if((typeof field.$name !== UNDEFINED) && field.$name !== "") {
 								continue;
 							}
 							hasError = true;
 							var qualifiedGenericError = templateUrl + "." + form.$name + ".$error." + errorTypeName;
-							addMessage({"id": qualifiedGenericError ,"text": qualifiedGenericError, "type": "error"});
+							addMessage({"id": qualifiedGenericError ,"text": qualifiedGenericError, "type": ERROR});
 							continue errorTypeLoop;
 						}
 					}
@@ -1103,32 +1039,159 @@
 				for(var formFieldError in form[fieldName].$error) {
 					hasError = true;
 					var qualifiedError = templateUrl + "." + form.$name + "." + fieldName + "." + formFieldError;
-					var noParametersQualifiedError = qualifiedError.replace(/\{.*?=.*?\}/, '{}');
-					if(typeof self.messagesMap[noParametersQualifiedError] === 'undefined') {
-						addMessage({"id": qualifiedError ,"text": qualifiedError, "type": "error"});
-						continue;
-					}
-					
-					var rawMessage = self.messagesMap[noParametersQualifiedError];
-					if(qualifiedError === noParametersQualifiedError) {
-						addMessage({"id": qualifiedError ,"text": rawMessage, "type": "error"});
-						continue;
-					}
-					var changedMessage = rawMessage;
-					var regEx = /\{(.*?)=(.*?)\}/g;
-					var regexResult;
-					while ((regexResult = regEx.exec(qualifiedError)) !== null) {
-						var paramName = regexResult[1];
-						var paramValue = regexResult[2];
-						changedMessage = changedMessage.replace("\{" + paramName + "\}", paramValue);
-					}
-					addMessage({"id": qualifiedError ,"text": changedMessage, "type": "error"});
+					addMessage({"id": qualifiedError ,"text": x(qualifiedError, self.messagesMap), "type": ERROR});
 				}
 			}
 			return hasError;
 		}
+
+		function validate(condition, message) {
+			var hasError = evalFunctionOrValue(condition);
+			if (!hasError) {
+				return hasError;
+			}
+			addMessage({"id": message.id ,"text": x(message.id, self.messagesMap), "type": message.type});
+			return hasError;
+		}
+
+		function x(qualifiedError, messagesMap) {
+			var noParametersQualifiedError = qualifiedError.replace(/\{.*?=.*?\}/, '{}');
+			var rawMessage = messagesMap[noParametersQualifiedError];
+			if(typeof rawMessage === UNDEFINED) {
+				return qualifiedError;
+			}
+			
+			if(qualifiedError === noParametersQualifiedError) {
+				return rawMessage;
+			}
+			var changedMessage = rawMessage;
+			var regEx = /\{(.*?)=(.*?)\}/g;
+			var regexResult;
+			while ((regexResult = regEx.exec(qualifiedError)) !== null) {
+				var paramName = regexResult[1];
+				var paramValue = regexResult[2];
+				changedMessage = changedMessage.replace("\{" + paramName + "\}", paramValue);
+			}
+			return changedMessage;
+		}
+
+	}
+
+	function evalFunctionOrValue(functionOrValue) {
+		if ((typeof functionOrValue === 'function') || (functionOrValue instanceof Function)) {
+			return functionOrValue();
+		}
+		return functionOrValue;
 	}
 })();	
+(function() {
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'IsLoading', IsLoadingDirective);
+
+	IsLoadingDirective.$inject=['Loading'];
+	function IsLoadingDirective(Loading) {
+		return {
+			restrict: 'EA',
+			link : IsLoadingDirectiveLink
+		};
+
+		function IsLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
+			
+			function processElement() {
+				var loadingExpressions = attrs.ngEasyIsLoading.split(';');
+				var isLoading = false;
+				loadingExpressions.forEach(function(loadingExpression) {
+					var loadings = Loading.getLoadings(loadingExpression);
+					isLoading = isLoading || (loadings.length > 0); 
+				});
+				if(isLoading) {
+					element.prop('style').removeProperty('display');
+					return;
+				}
+				element.prop('style').display = 'none';
+			}
+		}
+	}
+		
+})();
+(function() {	
+	angular.module(angular.easy.$moduleName).service(angular.easy.$providersPrefix + 'Loading', LoadingService);
+
+	function LoadingService() {
+		var self = this;
+
+		self.getChangeCount = getChangeCount;
+		self.getLoadings = getLoadings;
+		self.startLoading = startLoading;
+		self.stopLoading = stopLoading;
+		
+		init();
+		
+		function init() {
+			self.loadings = [];
+			self.changeCount = 0;
+		}
+
+		function getChangeCount() {
+			return self.changeCount;
+		}
+
+		function getLoadings(expression) {
+			if((typeof expression === 'undefined') || expression === "*") {
+				return self.loadings;
+			}
+			
+			return angular.easy.$$filterElements(self.loadings, expression);
+		}
+
+		function startLoading(loadingId) {
+			self.loadings.push(loadingId);
+			self.changeCount++;
+		}
+
+		function stopLoading(loadingId) {
+			var index = self.loadings.indexOf(loadingId);
+			if(index === -1) {
+				return;
+			}
+			self.loadings.splice(index, 1);
+			self.changeCount++;
+		}
+		
+	}
+})();	
+(function() {
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'NotLoading', NotLoadingDirective);
+
+	NotLoadingDirective.$inject=['Loading'];
+	function NotLoadingDirective(Loading) {
+		return {
+			restrict: 'EA',
+			link : NotLoadingDirectiveLink
+		};
+
+		function NotLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
+			
+			function processElement() {
+				var loadingExpressions = attrs.ngEasyNotLoading.split(';');
+				var isLoading = false;
+				loadingExpressions.forEach(function(loadingExpression) {
+					var loadings = Loading.getLoadings(loadingExpression);
+					isLoading = isLoading || (loadings.length > 0); 
+				});
+				if(isLoading) {
+					element.prop('style').display = 'none';
+					return;
+				}
+				element.prop('style').removeProperty('display');
+			}
+		}
+	}
+		
+})();
 (function() {
 	angular.module(angular.easy.$moduleName)
 		.directive(angular.easy.$directivesPrefix + 'BreadCrumbs', BreadCrumbsDirective);
@@ -1429,73 +1492,6 @@
 	}
 })();
 (function() {
-    angular.easy.property = property;
-    angular.easy.$$filterElements = filterElements;
-
-    function property(obj, propertyName, initialValue) {
-        var privateAttr = '_' + propertyName;
-        obj[privateAttr] = initialValue;
-
-		obj[propertyName] = function(value) {
-			if(typeof value === 'undefined') {
-				return obj[privateAttr];
-			}
-			obj[privateAttr] = value;
-		};
-    }
-
-    function filterElements(elements, expression, strExtractorFn) {
-        if(!expression || expression == "*") {
-            return elements;
-        }
-        
-        var returnElements = [];
-        var startWildcard = expression.startsWith("*");
-        var endWildcard = expression.endsWith("*");
-        for (var elementIndex = 0; elementIndex < elements.length; elementIndex++) {
-            var element = elements[elementIndex];
-            var str;
-            if(typeof strExtractorFn !== 'undefined') {
-                str = strExtractorFn(element);
-            } else {
-                str = element;
-            }
-
-            if(typeof str !== 'string') {
-                continue;
-            }
-
-            if(startWildcard && endWildcard) {
-                var middleSubstring = expression.substring(1, expression.length - 1);
-                if(str.indexOf(middleSubstring) !== -1) {
-                    returnElements.push(element);
-                }
-                continue;
-            }
-            if(startWildcard) {
-                var starterSubstring = expression.substring(1);
-                if(str.endsWith(starterSubstring)) {
-                    returnElements.push(element);
-                }
-                continue;
-            }
-            if(endWildcard) {
-                var terminatorSubstring = expression.substring(0, expression.length - 1);
-                if(str.startsWith(terminatorSubstring)) {
-                    returnElements.push(element);
-                }
-                continue;
-            }
-
-            if(str == expression) {
-                returnElements.push(element);
-                continue;
-            }
-        }
-        return returnElements;
-    }
-})();
-(function() {
     angular.module(angular.easy.$moduleName)
         .service(angular.easy.$providersPrefix + 'Urls', UrlsService);
 
@@ -1655,4 +1651,95 @@
         }
     }
 
+})();
+(function() {
+    angular.easy.property = property;
+    angular.easy.$$filterElements = filterElements;
+
+    function property(obj, propertyName, initialValue) {
+        var privateAttr = '_' + propertyName;
+        obj[privateAttr] = initialValue;
+
+		obj[propertyName] = function(value) {
+			if(typeof value === 'undefined') {
+				return obj[privateAttr];
+			}
+			obj[privateAttr] = value;
+		};
+    }
+
+    function filterElements(elements, expression, strExtractorFn) {
+        if(!expression || expression == "*") {
+            return elements;
+        }
+        
+        var returnElements = [];
+        var startWildcard = expression.startsWith("*");
+        var endWildcard = expression.endsWith("*");
+        for (var elementIndex = 0; elementIndex < elements.length; elementIndex++) {
+            var element = elements[elementIndex];
+            var str;
+            if(typeof strExtractorFn !== 'undefined') {
+                str = strExtractorFn(element);
+            } else {
+                str = element;
+            }
+
+            if(typeof str !== 'string') {
+                continue;
+            }
+
+            if(startWildcard && endWildcard) {
+                var middleSubstring = expression.substring(1, expression.length - 1);
+                if(str.indexOf(middleSubstring) !== -1) {
+                    returnElements.push(element);
+                }
+                continue;
+            }
+            if(startWildcard) {
+                var starterSubstring = expression.substring(1);
+                if(str.endsWith(starterSubstring)) {
+                    returnElements.push(element);
+                }
+                continue;
+            }
+            if(endWildcard) {
+                var terminatorSubstring = expression.substring(0, expression.length - 1);
+                if(str.startsWith(terminatorSubstring)) {
+                    returnElements.push(element);
+                }
+                continue;
+            }
+
+            if(str == expression) {
+                returnElements.push(element);
+                continue;
+            }
+        }
+        return returnElements;
+    }
+})();
+(function() {
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'Alias', AliasDirective);
+
+	function AliasDirective() {
+		return {
+			restrict : "EA",
+			link : AliasDirectiveLink
+		};
+
+		function AliasDirectiveLink(scope, element, attrs) {
+			var aliasAndExpressions = attrs.ngEasyAlias.split(';');
+			aliasAndExpressions.forEach(function(aliasAndExpression) {
+				var aliasAndExpressionArray = aliasAndExpression.split('=');
+				if(aliasAndExpressionArray.length != 2) {
+					throw "Alias and/or Expression not valid. Format: {alias} = {expression}";
+				}
+				var alias = aliasAndExpressionArray[0].trim();
+				var expression = aliasAndExpressionArray[1].trim();
+				scope.$watch(function(){ return scope.$eval(expression);}, function(newValue, oldValue) {scope[alias]=newValue;});
+			});
+		}
+	}
 })();

@@ -170,14 +170,41 @@
 				self[acessor].config = configValue;
 				self[acessor].effectiveConfig = effectiveConfig;
 				$injector = initInjectionMethod.caller.arguments[injectorArgumentIndex];
-
 				var $route = $injector.get('$route');
 				self[acessor].routes = $route.routes;
 
-				if (typeof self.status === UNDEFINED) {
-					self[effectiveConfig.initialStatus]();
+				var $location = $injector.get('$location');
+				var currentUrl = $locarion.url();
+
+				if (typeof self.status !== UNDEFINED) {
+					return;
 				}
-				return;
+
+				if(typeof effectiveConfig.initialStatus !== UNDEFINED) {
+					self[effectiveConfig.initialStatus]();
+					return;
+				}
+				
+				for (var path in self[acessor].routes) {
+					if (!self[acessor].routes.hasOwnProperty(path)) {
+						continue;
+					}
+					var route = self[acessor].routes[path];
+					if(!route.regexp.exec(currentUrl)) {
+						continue;
+					}
+					for (var statusName in self[acessor].effectiveConfig.status) {
+						if (!self[acessor].effectiveConfig.status.hasOwnProperty(statusName)) {
+							continue;
+						}
+						var status = self[acessor].effectiveConfig.status[statusName];			
+						var routeUrl = effectiveConfig.routeBase + status.route;
+						if(path === currentUrl) {
+							self[route.status]();
+							return;
+						}
+					}
+				}					
 			}
 			
 			function getModelInjectionMethod() {
@@ -407,9 +434,16 @@
 			if(typeof config.initialStatus !== UNDEFINED) {
 				return evalFunctionOrValue(config.initialStatus);
 			}
+			if (typeof config.routeBase !== UNDEFINED) {
+				return;
+			}
 			if (typeof config.status === UNDEFINED) {
 				return transformControllerNameToFeatureName(localEffectiveConfig.controllerName);
 			}
+			if (Object.keys(config.status).length === 1) {
+				return transformControllerNameToFeatureName(Object.keys(config.status)[0]);
+			}
+			//TODO Handle single status name
 			return;
 		}
 		
