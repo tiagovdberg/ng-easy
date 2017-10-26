@@ -174,7 +174,7 @@
 				self[acessor].routes = $route.routes;
 
 				var $location = $injector.get('$location');
-				var currentUrl = $locarion.url();
+				var currentUrl = $location.url();
 
 				if (typeof self.status !== UNDEFINED) {
 					return;
@@ -184,7 +184,7 @@
 					self[effectiveConfig.initialStatus]();
 					return;
 				}
-				
+
 				for (var path in self[acessor].routes) {
 					if (!self[acessor].routes.hasOwnProperty(path)) {
 						continue;
