@@ -38,7 +38,7 @@
     }
   }
 
-  function bind(originalFunction) {
+  function bind(originalFunction/*, arguments[1:] */) {
     var bindArgs = Array.prototype.slice.call(arguments, 1);
     return function() {
       var callArgs = Array.prototype.slice.call(arguments);
@@ -79,6 +79,7 @@
 (function() {
 	var //const
 		UNDEFINED = 'undefined',
+		FUNCTION = 'function',
 		CONTROLLERDEFAULTSUFFIXES = ['Controller', 'Ctrl', 'Ctl'],
 		CONTROLLERSCOPEVARIABLENAMESUFFIX = 'Ctrl',
 		METHODSPREFIX_DEFAULT_SERVICE_PUT = [ 'create', 'update', 'save', 'replace', 'put' ],
@@ -314,7 +315,10 @@
 				var oldStatusName = self.status;
 				if(typeof oldStatusName === UNDEFINED) {
 					oldStatusName = newStatusName;
+				} else if(typeof effectiveConfigStatus[oldStatusName].onExit === FUNCTION) {
+					evalFunctionOrValue(effectiveConfigStatus[oldStatusName].onExit, self);
 				}
+
 				self.status = newStatusName;
 
 				var serviceMethod = evalFunctionOrValue(effectiveConfigStatus[newStatusName].serviceMethod);
@@ -323,13 +327,13 @@
 				}
 				
 				var serviceUrl = (typeof effectiveConfigStatus[newStatusName].serviceUrl !== UNDEFINED) ? 
-						$injector.get('Urls').getBaseUrl() + evalFunctionOrValue(effectiveConfigStatus[newStatusName].serviceUrl) : 
+						$injector.get('Urls').getBaseUrl() + evalFunctionOrValue(effectiveConfigStatus[newStatusName].serviceUrl, self) : 
 						$injector.get('Urls').serviceUrl();
 				//FIXME Move to getEffectiveStatusSuccessFn and getEffectiveStatusFailFn 
 				var successFn = (typeof effectiveConfigStatus[newStatusName].success !== UNDEFINED) ? effectiveConfigStatus[newStatusName].success : ServiceSuccessPrototype;  
 				var failFn = (typeof effectiveConfigStatus[newStatusName].fail !== UNDEFINED) ? effectiveConfigStatus[newStatusName].fail : ServiceFailPrototype;
 				
-				var loading = evalFunctionOrValue(effectiveConfigStatus[newStatusName].loading);
+				var loading = evalFunctionOrValue(effectiveConfigStatus[newStatusName].loading, self);
 				$injector.get('Loading').startLoading(loading);
 				$injector.get('$http')({
 					method: serviceMethod,
@@ -342,13 +346,17 @@
 
 				//TODO model and data must accept functions with response as argument.
 				function ServiceSuccessPrototype(response) {
-					var statusOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].statusOnSuccess);
+					var statusOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].statusOnSuccess, self);
 					self.data[statusOnSuccess] = response.data;
-
 					
-					var modelOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].modelOnSuccess);
+					var modelOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].modelOnSuccess, self);
 					if(typeof modelOnSuccess !== UNDEFINED) {
 						self.model[statusOnSuccess] = modelOnSuccess;
+					}
+
+					var varsOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].varsOnSuccess, self);
+					if(typeof varsOnSuccess !== UNDEFINED) {
+						self.vars[statusOnSuccess] = varsOnSuccess;
 					}
 
 					var statusChanged = (statusOnSuccess !== newStatusName);
@@ -356,12 +364,12 @@
 						self[statusOnSuccess]();
 					}
 
-					var locationOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].locationOnSuccess);
+					var locationOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].locationOnSuccess, self);
 					if(typeof locationOnSuccess !== UNDEFINED) {
 						$injector.get('$location').url(locationOnSuccess);
 					}
 					
-					var messageOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].messageOnSuccess);
+					var messageOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].messageOnSuccess, self);
 					if(messageOnSuccess) {
 						if(typeof locationOnSuccess !== UNDEFINED) {
 							messageOnSuccess.persistent = true;
@@ -371,11 +379,16 @@
 				}
 				
 				function ServiceFailPrototype(response) {
-					var statusOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].statusOnFail);
+					var statusOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].statusOnFail, self);
 
-					var modelOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].modelOnFail);
+					var modelOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].modelOnFail, self);
 					if(typeof modelOnFail !== UNDEFINED) {
 						self.model[statusOnFail] = modelOnFail;
+					}
+
+					var varsOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].varsOnFail, self);
+					if(typeof varsOnFail !== UNDEFINED) {
+						self.vars[statusOnFail] = varsOnFail;
 					}
 
 					if((statusOnFail !== oldStatusName) && (statusOnFail !== newStatusName)) {
@@ -383,13 +396,13 @@
 					} else {
 						self.status = statusOnFail;
 					}
-					var locationOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].locationOnFail);
+					var locationOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].locationOnFail, self);
 					var hasLocationOnFail = (typeof locationOnFail !== UNDEFINED);
 					if(response.status != 401 && hasLocationOnFail) {
 						$injector.get('$location').url(locationOnFail);
 					}
 					Messages.handleErrors(response);
-					var messageOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].messageOnFail);
+					var messageOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].messageOnFail, self);
 					if(messageOnFail) {
 						Messages.addMessage(messageOnFail);
 					}
@@ -398,9 +411,10 @@
 		}
 	}
 
-	function evalFunctionOrValue(functionOrValue) {
-		if ((typeof functionOrValue === 'function') || (functionOrValue instanceof Function)) {
-			return functionOrValue();
+	function evalFunctionOrValue(functionOrValue /*, arguments[1:] */) {
+		var extraArgs = Array.prototype.slice.call(arguments, 1);
+		if ((typeof functionOrValue === FUNCTION) || (functionOrValue instanceof Function)) {
+			return functionOrValue.apply(this, extraArgs);
 		}
 		return functionOrValue;
 	}
@@ -538,12 +552,15 @@
 			effectiveStatus.fail = status.fail;
 			effectiveStatus.statusOnSuccess = getEffectiveStatusStatusOnSuccess(statusName, status);
 			effectiveStatus.statusOnFail = getEffectiveStatusStatusOnFail(statusName, status);
-			effectiveStatus.modelOnSuccess = getEffectiveStatusModelOnSuccess(statusName, status);
-			effectiveStatus.modelOnFail = getEffectiveStatusModelOnFail(statusName, status);
-			effectiveStatus.locationOnSuccess = getEffectiveStatusLocationOnSuccess(statusName, status);
-			effectiveStatus.locationOnFail = getEffectiveStatusLocationOnFail(statusName, status);
-			effectiveStatus.messageOnSuccess = getEffectiveStatusMessageOnSuccess(statusName, status);
-			effectiveStatus.messageOnFail = getEffectiveStatusMessageOnFail(statusName, status);
+			effectiveStatus.modelOnSuccess = status.modelOnSuccess;
+			effectiveStatus.modelOnFail = status.modelOnFail;
+			effectiveStatus.varsOnSuccess = status.varsOnSuccess;
+			effectiveStatus.varsOnFail = status.varsOnFail;
+			effectiveStatus.locationOnSuccess = status.locationOnSuccess;
+			effectiveStatus.locationOnFail = status.locationOnFail;
+			effectiveStatus.messageOnSuccess = status.messageOnSuccess;
+			effectiveStatus.messageOnFail = status.messageOnFail;
+			effectiveStatus.onExit = status.onExit;
 			return effectiveStatus;
 		}		
 		
@@ -608,30 +625,6 @@
 			return (typeof status.statusOnFail !== UNDEFINED) ?
 				status.statusOnFail :
 				statusName;
-		}
-
-		function getEffectiveStatusModelOnSuccess(statusName, status) {
-			return status.modelOnSuccess;
-		}
-
-		function getEffectiveStatusModelOnFail(statusName, status) {
-			return status.modelOnFail;
-		}
-
-		function getEffectiveStatusLocationOnSuccess(statusName, status) {
-			return status.locationOnSuccess;
-		}
-
-		function getEffectiveStatusLocationOnFail(statusName, status) {
-			return status.locationOnFail;
-		}
-
-		function getEffectiveStatusMessageOnSuccess(statusName, status) {
-			return status.messageOnSuccess;
-		}
-
-		function getEffectiveStatusMessageOnFail(statusName, status) {
-			return status.messageOnFail;
 		}
 	}
 
@@ -788,114 +781,6 @@
 		}
 		return false;
 	}
-})();
-(function() {
-	angular.module(angular.easy.$moduleName)
-		.directive(angular.easy.$directivesPrefix + 'IsLoading', IsLoadingDirective);
-
-	IsLoadingDirective.$inject=['Loading'];
-	function IsLoadingDirective(Loading) {
-		return {
-			restrict: 'EA',
-			link : IsLoadingDirectiveLink
-		};
-
-		function IsLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
-			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
-			
-			function processElement() {
-				var loadingExpressions = attrs.ngEasyIsLoading.split(';');
-				var isLoading = false;
-				loadingExpressions.forEach(function(loadingExpression) {
-					var loadings = Loading.getLoadings(loadingExpression);
-					isLoading = isLoading || (loadings.length > 0); 
-				});
-				if(isLoading) {
-					element.prop('style').removeProperty('display');
-					return;
-				}
-				element.prop('style').display = 'none';
-			}
-		}
-	}
-		
-})();
-(function() {	
-	angular.module(angular.easy.$moduleName).service(angular.easy.$providersPrefix + 'Loading', LoadingService);
-
-	function LoadingService() {
-		var self = this;
-
-		self.getChangeCount = getChangeCount;
-		self.getLoadings = getLoadings;
-		self.startLoading = startLoading;
-		self.stopLoading = stopLoading;
-		
-		init();
-		
-		function init() {
-			self.loadings = [];
-			self.changeCount = 0;
-		}
-
-		function getChangeCount() {
-			return self.changeCount;
-		}
-
-		function getLoadings(expression) {
-			if((typeof expression === 'undefined') || expression === "*") {
-				return self.loadings;
-			}
-			
-			return angular.easy.$$filterElements(self.loadings, expression);
-		}
-
-		function startLoading(loadingId) {
-			self.loadings.push(loadingId);
-			self.changeCount++;
-		}
-
-		function stopLoading(loadingId) {
-			var index = self.loadings.indexOf(loadingId);
-			if(index === -1) {
-				return;
-			}
-			self.loadings.splice(index, 1);
-			self.changeCount++;
-		}
-		
-	}
-})();	
-(function() {
-	angular.module(angular.easy.$moduleName)
-		.directive(angular.easy.$directivesPrefix + 'NotLoading', NotLoadingDirective);
-
-	NotLoadingDirective.$inject=['Loading'];
-	function NotLoadingDirective(Loading) {
-		return {
-			restrict: 'EA',
-			link : NotLoadingDirectiveLink
-		};
-
-		function NotLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
-			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
-			
-			function processElement() {
-				var loadingExpressions = attrs.ngEasyNotLoading.split(';');
-				var isLoading = false;
-				loadingExpressions.forEach(function(loadingExpression) {
-					var loadings = Loading.getLoadings(loadingExpression);
-					isLoading = isLoading || (loadings.length > 0); 
-				});
-				if(isLoading) {
-					element.prop('style').display = 'none';
-					return;
-				}
-				element.prop('style').removeProperty('display');
-			}
-		}
-	}
-		
 })();
 (function() {
 	angular.module(angular.easy.$moduleName)
@@ -1742,4 +1627,112 @@
         }
         return returnElements;
     }
+})();
+(function() {
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'IsLoading', IsLoadingDirective);
+
+	IsLoadingDirective.$inject=['Loading'];
+	function IsLoadingDirective(Loading) {
+		return {
+			restrict: 'EA',
+			link : IsLoadingDirectiveLink
+		};
+
+		function IsLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
+			
+			function processElement() {
+				var loadingExpressions = attrs.ngEasyIsLoading.split(';');
+				var isLoading = false;
+				loadingExpressions.forEach(function(loadingExpression) {
+					var loadings = Loading.getLoadings(loadingExpression);
+					isLoading = isLoading || (loadings.length > 0); 
+				});
+				if(isLoading) {
+					element.prop('style').removeProperty('display');
+					return;
+				}
+				element.prop('style').display = 'none';
+			}
+		}
+	}
+		
+})();
+(function() {	
+	angular.module(angular.easy.$moduleName).service(angular.easy.$providersPrefix + 'Loading', LoadingService);
+
+	function LoadingService() {
+		var self = this;
+
+		self.getChangeCount = getChangeCount;
+		self.getLoadings = getLoadings;
+		self.startLoading = startLoading;
+		self.stopLoading = stopLoading;
+		
+		init();
+		
+		function init() {
+			self.loadings = [];
+			self.changeCount = 0;
+		}
+
+		function getChangeCount() {
+			return self.changeCount;
+		}
+
+		function getLoadings(expression) {
+			if((typeof expression === 'undefined') || expression === "*") {
+				return self.loadings;
+			}
+			
+			return angular.easy.$$filterElements(self.loadings, expression);
+		}
+
+		function startLoading(loadingId) {
+			self.loadings.push(loadingId);
+			self.changeCount++;
+		}
+
+		function stopLoading(loadingId) {
+			var index = self.loadings.indexOf(loadingId);
+			if(index === -1) {
+				return;
+			}
+			self.loadings.splice(index, 1);
+			self.changeCount++;
+		}
+		
+	}
+})();	
+(function() {
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'NotLoading', NotLoadingDirective);
+
+	NotLoadingDirective.$inject=['Loading'];
+	function NotLoadingDirective(Loading) {
+		return {
+			restrict: 'EA',
+			link : NotLoadingDirectiveLink
+		};
+
+		function NotLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
+			
+			function processElement() {
+				var loadingExpressions = attrs.ngEasyNotLoading.split(';');
+				var isLoading = false;
+				loadingExpressions.forEach(function(loadingExpression) {
+					var loadings = Loading.getLoadings(loadingExpression);
+					isLoading = isLoading || (loadings.length > 0); 
+				});
+				if(isLoading) {
+					element.prop('style').display = 'none';
+					return;
+				}
+				element.prop('style').removeProperty('display');
+			}
+		}
+	}
+		
 })();
