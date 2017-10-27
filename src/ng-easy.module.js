@@ -38,7 +38,7 @@
     }
   }
 
-  function bind(originalFunction) {
+  function bind(originalFunction/*, arguments[1:] */) {
     var bindArgs = Array.prototype.slice.call(arguments, 1);
     return function() {
       var callArgs = Array.prototype.slice.call(arguments);
