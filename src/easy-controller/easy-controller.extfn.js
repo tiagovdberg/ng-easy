@@ -225,17 +225,22 @@
 
 			function getTemplateUrlInjectionMethod() {
 				var self = this;
-				return effectiveConfig.templateBaseUrl + evalFunctionOrValue(effectiveConfigStatus[self.status].templateUrl);
+				return effectiveConfig.templateBaseUrl + evalFunctionOrValue(effectiveConfigStatus[self.status].templateUrl, self);
 			}
 
 			function statusInjectionMethod(newStatusName, form) {
 				var self = this;
 
 				var Messages = $injector.get('Messages');
+
+				var $q = $injector.get('$q');
+				
 				Messages.clearMessages();
 				
 				if ((typeof form !== UNDEFINED) && Messages.formErrors(self.getTemplateUrl(), form)) {
-					return;
+					var df1 = $q.defer();
+					df1.resolve();
+					return df1.promise;
 				}
 
 				var oldStatusName = self.status;
@@ -249,7 +254,9 @@
 
 				var serviceMethod = evalFunctionOrValue(effectiveConfigStatus[newStatusName].serviceMethod);
 				if(typeof serviceMethod === UNDEFINED) {
-					return;
+					var df2 = $q.defer();
+					df2.resolve();
+					return df2.promise;
 				}
 				
 				var serviceUrl = (typeof effectiveConfigStatus[newStatusName].serviceUrl !== UNDEFINED) ? 
@@ -261,7 +268,7 @@
 				
 				var loading = evalFunctionOrValue(effectiveConfigStatus[newStatusName].loading, self);
 				$injector.get('Loading').startLoading(loading);
-				$injector.get('$http')({
+				return $injector.get('$http')({
 					method: serviceMethod,
 					data: self.model[oldStatusName],
 					url: serviceUrl

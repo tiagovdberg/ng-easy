@@ -299,17 +299,22 @@
 
 			function getTemplateUrlInjectionMethod() {
 				var self = this;
-				return effectiveConfig.templateBaseUrl + evalFunctionOrValue(effectiveConfigStatus[self.status].templateUrl);
+				return effectiveConfig.templateBaseUrl + evalFunctionOrValue(effectiveConfigStatus[self.status].templateUrl, self);
 			}
 
 			function statusInjectionMethod(newStatusName, form) {
 				var self = this;
 
 				var Messages = $injector.get('Messages');
+
+				var $q = $injector.get('$q');
+				
 				Messages.clearMessages();
 				
 				if ((typeof form !== UNDEFINED) && Messages.formErrors(self.getTemplateUrl(), form)) {
-					return;
+					var df1 = $q.defer();
+					df1.resolve();
+					return df1.promise;
 				}
 
 				var oldStatusName = self.status;
@@ -323,7 +328,9 @@
 
 				var serviceMethod = evalFunctionOrValue(effectiveConfigStatus[newStatusName].serviceMethod);
 				if(typeof serviceMethod === UNDEFINED) {
-					return;
+					var df2 = $q.defer();
+					df2.resolve();
+					return df2.promise;
 				}
 				
 				var serviceUrl = (typeof effectiveConfigStatus[newStatusName].serviceUrl !== UNDEFINED) ? 
@@ -335,7 +342,7 @@
 				
 				var loading = evalFunctionOrValue(effectiveConfigStatus[newStatusName].loading, self);
 				$injector.get('Loading').startLoading(loading);
-				$injector.get('$http')({
+				return $injector.get('$http')({
 					method: serviceMethod,
 					data: self.model[oldStatusName],
 					url: serviceUrl
@@ -781,6 +788,114 @@
 		}
 		return false;
 	}
+})();
+(function() {
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'IsLoading', IsLoadingDirective);
+
+	IsLoadingDirective.$inject=['Loading'];
+	function IsLoadingDirective(Loading) {
+		return {
+			restrict: 'EA',
+			link : IsLoadingDirectiveLink
+		};
+
+		function IsLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
+			
+			function processElement() {
+				var loadingExpressions = attrs.ngEasyIsLoading.split(';');
+				var isLoading = false;
+				loadingExpressions.forEach(function(loadingExpression) {
+					var loadings = Loading.getLoadings(loadingExpression);
+					isLoading = isLoading || (loadings.length > 0); 
+				});
+				if(isLoading) {
+					element.prop('style').removeProperty('display');
+					return;
+				}
+				element.prop('style').display = 'none';
+			}
+		}
+	}
+		
+})();
+(function() {	
+	angular.module(angular.easy.$moduleName).service(angular.easy.$providersPrefix + 'Loading', LoadingService);
+
+	function LoadingService() {
+		var self = this;
+
+		self.getChangeCount = getChangeCount;
+		self.getLoadings = getLoadings;
+		self.startLoading = startLoading;
+		self.stopLoading = stopLoading;
+		
+		init();
+		
+		function init() {
+			self.loadings = [];
+			self.changeCount = 0;
+		}
+
+		function getChangeCount() {
+			return self.changeCount;
+		}
+
+		function getLoadings(expression) {
+			if((typeof expression === 'undefined') || expression === "*") {
+				return self.loadings;
+			}
+			
+			return angular.easy.$$filterElements(self.loadings, expression);
+		}
+
+		function startLoading(loadingId) {
+			self.loadings.push(loadingId);
+			self.changeCount++;
+		}
+
+		function stopLoading(loadingId) {
+			var index = self.loadings.indexOf(loadingId);
+			if(index === -1) {
+				return;
+			}
+			self.loadings.splice(index, 1);
+			self.changeCount++;
+		}
+		
+	}
+})();	
+(function() {
+	angular.module(angular.easy.$moduleName)
+		.directive(angular.easy.$directivesPrefix + 'NotLoading', NotLoadingDirective);
+
+	NotLoadingDirective.$inject=['Loading'];
+	function NotLoadingDirective(Loading) {
+		return {
+			restrict: 'EA',
+			link : NotLoadingDirectiveLink
+		};
+
+		function NotLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
+			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
+			
+			function processElement() {
+				var loadingExpressions = attrs.ngEasyNotLoading.split(';');
+				var isLoading = false;
+				loadingExpressions.forEach(function(loadingExpression) {
+					var loadings = Loading.getLoadings(loadingExpression);
+					isLoading = isLoading || (loadings.length > 0); 
+				});
+				if(isLoading) {
+					element.prop('style').display = 'none';
+					return;
+				}
+				element.prop('style').removeProperty('display');
+			}
+		}
+	}
+		
 })();
 (function() {
 	angular.module(angular.easy.$moduleName)
@@ -1627,112 +1742,4 @@
         }
         return returnElements;
     }
-})();
-(function() {
-	angular.module(angular.easy.$moduleName)
-		.directive(angular.easy.$directivesPrefix + 'IsLoading', IsLoadingDirective);
-
-	IsLoadingDirective.$inject=['Loading'];
-	function IsLoadingDirective(Loading) {
-		return {
-			restrict: 'EA',
-			link : IsLoadingDirectiveLink
-		};
-
-		function IsLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
-			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
-			
-			function processElement() {
-				var loadingExpressions = attrs.ngEasyIsLoading.split(';');
-				var isLoading = false;
-				loadingExpressions.forEach(function(loadingExpression) {
-					var loadings = Loading.getLoadings(loadingExpression);
-					isLoading = isLoading || (loadings.length > 0); 
-				});
-				if(isLoading) {
-					element.prop('style').removeProperty('display');
-					return;
-				}
-				element.prop('style').display = 'none';
-			}
-		}
-	}
-		
-})();
-(function() {	
-	angular.module(angular.easy.$moduleName).service(angular.easy.$providersPrefix + 'Loading', LoadingService);
-
-	function LoadingService() {
-		var self = this;
-
-		self.getChangeCount = getChangeCount;
-		self.getLoadings = getLoadings;
-		self.startLoading = startLoading;
-		self.stopLoading = stopLoading;
-		
-		init();
-		
-		function init() {
-			self.loadings = [];
-			self.changeCount = 0;
-		}
-
-		function getChangeCount() {
-			return self.changeCount;
-		}
-
-		function getLoadings(expression) {
-			if((typeof expression === 'undefined') || expression === "*") {
-				return self.loadings;
-			}
-			
-			return angular.easy.$$filterElements(self.loadings, expression);
-		}
-
-		function startLoading(loadingId) {
-			self.loadings.push(loadingId);
-			self.changeCount++;
-		}
-
-		function stopLoading(loadingId) {
-			var index = self.loadings.indexOf(loadingId);
-			if(index === -1) {
-				return;
-			}
-			self.loadings.splice(index, 1);
-			self.changeCount++;
-		}
-		
-	}
-})();	
-(function() {
-	angular.module(angular.easy.$moduleName)
-		.directive(angular.easy.$directivesPrefix + 'NotLoading', NotLoadingDirective);
-
-	NotLoadingDirective.$inject=['Loading'];
-	function NotLoadingDirective(Loading) {
-		return {
-			restrict: 'EA',
-			link : NotLoadingDirectiveLink
-		};
-
-		function NotLoadingDirectiveLink(scope, element, attrs, ctrl, transclude) {
-			scope.$watch(function(){ return Loading.getChangeCount();}, processElement);
-			
-			function processElement() {
-				var loadingExpressions = attrs.ngEasyNotLoading.split(';');
-				var isLoading = false;
-				loadingExpressions.forEach(function(loadingExpression) {
-					var loadings = Loading.getLoadings(loadingExpression);
-					isLoading = isLoading || (loadings.length > 0); 
-				});
-				if(isLoading) {
-					element.prop('style').display = 'none';
-					return;
-				}
-				element.prop('style').removeProperty('display');
-			}
-		}
-	}
-		
 })();
