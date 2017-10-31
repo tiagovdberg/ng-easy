@@ -265,7 +265,7 @@
 						continue;
 					}
 					var route = self[acessor].routes[path];
-					if(!route.regexp.exec(currentUrl)) {
+					if((typeof route.regexp === UNDEFINED) || !route.regexp.exec(currentUrl)) {
 						continue;
 					}
 					for (var statusName in self[acessor].effectiveConfig.status) {
@@ -957,8 +957,20 @@
 				priorityMap[Messages.MESSAGE] = 4;
 				
 				var elementClass;
+				var classMap ={};
 				var priority = Infinity;
 				highlightExpressions.forEach(function(highlightExpression) {
+					var classMapExpressions = highlightExpression.split('=');
+					if(classMapExpressions.length > 2) {
+						return;
+					}
+					if(classMapExpressions.length === 2) {
+						if(classMapExpressions[0] === '' || classMapExpressions[1] === '') {
+							return;
+						}
+						classMap[classMapExpressions[0]] = classMapExpressions[1];
+						return;
+					}
 					var messages = Messages.getMessages(highlightExpression);
 					messages.forEach(function(message) {
 						var messagePriority = priorityMap[message.type];
@@ -969,7 +981,7 @@
 					});
 				});
 				if(elementClass) { 
-					element.addClass(elementClass);
+					element.addClass(typeof classMap[elementClass] !== 'undefined' ? classMap[elementClass] : elementClass);
 				}
 			}
 		}
@@ -998,9 +1010,22 @@
 				});
 				dynamicalyAddedElements.length = 0;
 				var showMessageExpressions = attrs.ngEasyMessages.split(';');
+				var classMap = {};
+				showMessageExpressions.forEach(function(showMessageExpression) {
+					var classMapExpressions = showMessageExpression.split('=');
+					if(classMapExpressions.length !== 2) {
+						return;
+					}
+					if(classMapExpressions[0] === '' || classMapExpressions[1] === '') {
+						return;
+					}
+					classMap[classMapExpressions[0]] = classMapExpressions[1];
+					return;
+				});
 				showMessageExpressions.forEach(function(showMessageExpression) {
 					var messages = Messages.getMessages(showMessageExpression);
 					messages.forEach(function(message) {
+						message.class = (typeof classMap[message.type] !== 'undefined') ? classMap[message.type] : message.type;
 						var originalElementClone = transclude(function(clone, transcludeScope) {transcludeScope.message = message;});
 						dynamicalyAddedElements.push(originalElementClone);
 						element.after(originalElementClone);

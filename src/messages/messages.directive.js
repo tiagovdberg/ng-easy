@@ -20,9 +20,22 @@
 				});
 				dynamicalyAddedElements.length = 0;
 				var showMessageExpressions = attrs.ngEasyMessages.split(';');
+				var classMap = {};
+				showMessageExpressions.forEach(function(showMessageExpression) {
+					var classMapExpressions = showMessageExpression.split('=');
+					if(classMapExpressions.length !== 2) {
+						return;
+					}
+					if(classMapExpressions[0] === '' || classMapExpressions[1] === '') {
+						return;
+					}
+					classMap[classMapExpressions[0]] = classMapExpressions[1];
+					return;
+				});
 				showMessageExpressions.forEach(function(showMessageExpression) {
 					var messages = Messages.getMessages(showMessageExpression);
 					messages.forEach(function(message) {
+						message.class = (typeof classMap[message.type] !== 'undefined') ? classMap[message.type] : message.type;
 						var originalElementClone = transclude(function(clone, transcludeScope) {transcludeScope.message = message;});
 						dynamicalyAddedElements.push(originalElementClone);
 						element.after(originalElementClone);

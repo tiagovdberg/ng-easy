@@ -191,7 +191,7 @@
 						continue;
 					}
 					var route = self[acessor].routes[path];
-					if(!route.regexp.exec(currentUrl)) {
+					if((typeof route.regexp === UNDEFINED) || !route.regexp.exec(currentUrl)) {
 						continue;
 					}
 					for (var statusName in self[acessor].effectiveConfig.status) {

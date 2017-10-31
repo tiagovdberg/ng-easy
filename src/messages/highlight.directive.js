@@ -24,8 +24,20 @@
 				priorityMap[Messages.MESSAGE] = 4;
 				
 				var elementClass;
+				var classMap ={};
 				var priority = Infinity;
 				highlightExpressions.forEach(function(highlightExpression) {
+					var classMapExpressions = highlightExpression.split('=');
+					if(classMapExpressions.length > 2) {
+						return;
+					}
+					if(classMapExpressions.length === 2) {
+						if(classMapExpressions[0] === '' || classMapExpressions[1] === '') {
+							return;
+						}
+						classMap[classMapExpressions[0]] = classMapExpressions[1];
+						return;
+					}
 					var messages = Messages.getMessages(highlightExpression);
 					messages.forEach(function(message) {
 						var messagePriority = priorityMap[message.type];
@@ -36,7 +48,7 @@
 					});
 				});
 				if(elementClass) { 
-					element.addClass(elementClass);
+					element.addClass(typeof classMap[elementClass] !== 'undefined' ? classMap[elementClass] : elementClass);
 				}
 			}
 		}
