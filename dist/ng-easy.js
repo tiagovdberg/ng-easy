@@ -1159,11 +1159,11 @@
 				type = ERROR;
 			}
 			
-			if(typeof response.data.text !== UNDEFINED) {
-				addMessage({"id": response.data.text ,"text": response.data.text, "type": type});
+			if(typeof response.data.text === UNDEFINED) {
+				addMessage({"id": response.status.toString() ,"text": response.statusText, "type": type});
 				return;
 			}
-			addMessage({"id": response.status.toString() ,"text": response.statusText, "type": type});
+			addMessage({"id": response.data.text ,"text": parameterizeMessage(response.data.text, self.messagesMap), "type": type});
 		}
 
 		function formErrors(templateUrl, form) {
@@ -1207,11 +1207,11 @@
 			if (!hasError) {
 				return hasError;
 			}
-			addMessage({"id": message.id ,"text": x(message.id, self.messagesMap), "type": message.type});
+			addMessage({"id": message.id ,"text": parameterizeMessage(message.id, self.messagesMap), "type": message.type});
 			return hasError;
 		}
 
-		function x(qualifiedError, messagesMap) {
+		function parameterizeMessage(qualifiedError, messagesMap) {
 			var noParametersQualifiedError = qualifiedError.replace(/\{.*?=.*?\}/, '{}');
 			var rawMessage = messagesMap[noParametersQualifiedError];
 			if(typeof rawMessage === UNDEFINED) {
