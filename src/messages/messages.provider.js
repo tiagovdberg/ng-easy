@@ -101,7 +101,13 @@
 		}
 
 		function clearMessages() {
-			self.messages.length = 0;
+			self.messages.forEach(function(item, index, object) {
+				  if (item.persistent) {
+					  delete item.persistent;
+				  } else {
+					  object.splice(index, 1);
+				  }
+			});
 			self.changeCount++;
 		}
 		
@@ -158,7 +164,7 @@
 				for(var formFieldError in form[fieldName].$error) {
 					hasError = true;
 					var qualifiedError = templateUrl + "." + form.$name + "." + fieldName + "." + formFieldError;
-					addMessage({"id": qualifiedError ,"text": x(qualifiedError, self.messagesMap), "type": ERROR});
+					addMessage({"id": qualifiedError ,"text": parameterizeMessage(qualifiedError, self.messagesMap), "type": ERROR});
 				}
 			}
 			return hasError;
