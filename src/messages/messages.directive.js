@@ -19,19 +19,14 @@
 					dynamicalyAddedElement.remove();
 				});
 				dynamicalyAddedElements.length = 0;
-				var showMessageExpressions = attrs.ngEasyMessages.split(';');
-				var classMap = {};
-				showMessageExpressions.forEach(function(showMessageExpression) {
-					var classMapExpressions = showMessageExpression.split('=');
-					if(classMapExpressions.length !== 2) {
-						return;
-					}
-					if(classMapExpressions[0] === '' || classMapExpressions[1] === '') {
-						return;
-					}
-					classMap[classMapExpressions[0]] = classMapExpressions[1];
+
+				var showMessageCommand = attrs.ngEasyMessages.split('|');
+				if (showMessageCommand.length > 2) {
 					return;
-				});
+				}
+
+				var showMessageExpressions = showMessageCommand[0].split(';');
+			 	var classMap = showMessageCommand.length == 2 ? parseClassMapExpressions(showMessageCommand[1]) : {};
 				showMessageExpressions.forEach(function(showMessageExpression) {
 					var messages = Messages.getMessages(showMessageExpression);
 					messages.forEach(function(message) {
@@ -44,5 +39,25 @@
 			}
 		}
 	}
-		
+
+	function parseClassMapExpressions(classMapExpressions) {
+		var classMap ={};
+		var classMapExpressionsArray = classMapExpressions.split(';');
+		for(var index = 0; index < classMapExpressionsArray.length; index++) {
+			var classMapExpression = classMapExpressionsArray[index];
+			var classMapExpressionAssignment = classMapExpression.split('=');
+			if(classMapExpressionAssignment.length > 2) {
+				return {};
+			}
+			if(classMapExpressionAssignment.length === 2) {
+				var classMapExpressionFrom = classMapExpressionAssignment[0].trim();
+				var classMapExpressionTo = classMapExpressionAssignment[1].trim();
+				if(classMapExpressionFrom === '' || classMapExpressionTo === '') {
+					return {};
+				}
+				classMap[classMapExpressionFrom] = classMapExpressionTo;
+			}
+		}
+		return classMap;
+	}
 })();
