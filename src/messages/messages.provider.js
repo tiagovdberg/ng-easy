@@ -101,13 +101,15 @@
 		}
 
 		function clearMessages() {
-			self.messages.forEach(function(item, index, object) {
-				  if (item.persistent) {
-					  delete item.persistent;
-				  } else {
-					  object.splice(index, 1);
-				  }
-			});
+			var i = self.messages.length;
+			while (i--) {
+				var item = self.messages[i];
+				if (item.persistent) {
+					delete item.persistent;
+					continue;
+				}
+				self.messages.splice(i, 1);
+			}
 			self.changeCount++;
 		}
 		
@@ -180,7 +182,7 @@
 		}
 
 		function parameterizeMessage(qualifiedError, messagesMap) {
-			var noParametersQualifiedError = qualifiedError.replace(/\{.*?=.*?\}/, '{}');
+			var noParametersQualifiedError = qualifiedError.replace(/\{(.*?=)?.*?\}/g, '{}').replace(/\[.*?=.*?\]/g, '');
 			var rawMessage = messagesMap[noParametersQualifiedError];
 			if(typeof rawMessage === UNDEFINED) {
 				return qualifiedError;
@@ -190,11 +192,11 @@
 				return rawMessage;
 			}
 			var changedMessage = rawMessage;
-			var regEx = /\{(.*?)=(.*?)\}/g;
+			var regEx = /(\{|\[)(.*?)=(.*?)(\}|\])/g;
 			var regexResult;
 			while ((regexResult = regEx.exec(qualifiedError)) !== null) {
-				var paramName = regexResult[1];
-				var paramValue = regexResult[2];
+				var paramName = regexResult[2];
+				var paramValue = regexResult[3];
 				changedMessage = changedMessage.replace("\{" + paramName + "\}", paramValue);
 			}
 			return changedMessage;
