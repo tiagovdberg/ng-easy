@@ -128,12 +128,22 @@
 			if(response.status >= 400 && response.status <= 499) {
 				type = ERROR;
 			}
-			
-			if(typeof response.data.text === UNDEFINED) {
-				addMessage({"id": response.status.toString() ,"text": response.statusText, "type": type});
+
+			if(typeof response.data.errors !== UNDEFINED) {
+				for(var errorIndex = 0; errorIndex < response.data.errors.length; errorIndex++) {
+					var error = response.data.errors[errorIndex];
+					addMessage({"id": error.code ,"text": error.title, "type": type});
+				}
+
 				return;
 			}
-			addMessage({"id": response.data.text ,"text": parameterizeMessage(response.data.text, self.messagesMap), "type": type});
+
+			if(typeof response.data.text !== UNDEFINED) {
+				addMessage({"id": response.data.text ,"text": parameterizeMessage(response.data.text, self.messagesMap), "type": type});
+				return;
+			}
+
+			addMessage({"id": response.status.toString() ,"text": response.statusText, "type": type});
 		}
 
 		function formErrors(templateUrl, form) {
