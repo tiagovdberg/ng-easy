@@ -56,8 +56,8 @@
 			}
 			effectiveConfigControllerPrototype[acessor] = {};
 			injectInitMethod();
-			injectAndInitializeStatusAndModelAndDataAndVars();
-			injectInexistentModelAndDataAndVarsAndTemplateAcessors();
+			injectAndInitializeStatusAndModelAndDataAndVarsAndParams();
+			injectInexistentModelAndDataAndVarsAndParamsAndTemplateAcessors();
 			injectInexistentStatusMethods(effectiveConfig);
 			if(typeof effectiveConfig.messages !== UNDEFINED) {
 				MessagesProvider.addMessagesMap(effectiveConfig.messages);
@@ -78,6 +78,7 @@
 				var controllerRouteConfig = {
 					controller : effectiveConfig.controllerName,
 					controllerAs : effectiveConfig.controllerAs,
+					//reloadOnSearch : false,
 					template : '<ng:include src="' + effectiveConfig.controllerAs + '.getTemplateUrl()"></ng:include>'
 				};
 				
@@ -105,7 +106,7 @@
 				}
 			}
 			
-			function injectAndInitializeStatusAndModelAndDataAndVars() {
+			function injectAndInitializeStatusAndModelAndDataAndVarsAndParams() {
 				if (typeof effectiveConfigControllerPrototype.model === UNDEFINED) {
 					effectiveConfigControllerPrototype.model = {};
 				}
@@ -116,6 +117,10 @@
 
 				if (typeof effectiveConfigControllerPrototype.vars === UNDEFINED) {
 					effectiveConfigControllerPrototype.vars = {};
+				}
+
+				if (typeof effectiveConfigControllerPrototype.params === UNDEFINED) {
+					effectiveConfigControllerPrototype.params = {};
 				}
 
 				for (var statusName in effectiveConfigStatus) {
@@ -131,10 +136,13 @@
 					if (typeof effectiveConfigControllerPrototype.vars[statusName] === UNDEFINED) {
 						effectiveConfigControllerPrototype.vars[statusName] = {};
 					}
+					if (typeof effectiveConfigControllerPrototype.params[statusName] === UNDEFINED) {
+						effectiveConfigControllerPrototype.params[statusName] = {};
+					}
 				}
 			}
 
-			function injectInexistentModelAndDataAndVarsAndTemplateAcessors() {
+			function injectInexistentModelAndDataAndVarsAndParamsAndTemplateAcessors() {
 				if (typeof effectiveConfigControllerPrototype.getModel === UNDEFINED) {
 					effectiveConfigControllerPrototype.getModel = getModelInjectionMethod;
 				}
@@ -145,6 +153,10 @@
 
 				if (typeof effectiveConfigControllerPrototype.getVars === UNDEFINED) {
 					effectiveConfigControllerPrototype.getVars = getVarsInjectionMethod;
+				}
+
+				if (typeof effectiveConfigControllerPrototype.getParams === UNDEFINED) {
+					effectiveConfigControllerPrototype.getParams = getParamsInjectionMethod;
 				}
 
 				if (typeof effectiveConfigControllerPrototype.getTemplateUrl === UNDEFINED) {
@@ -162,6 +174,11 @@
 					if(typeof effectiveConfigControllerPrototype[statusName] !== UNDEFINED) {
 						continue;
 					}
+					
+					if(typeof effectiveConfigStatus[statusName] === FUNCTION || effectiveConfigStatus[statusName] instanceof Function) {
+						effectiveConfigControllerPrototype[statusName] = effectiveConfigStatus[statusName];
+						continue;
+					}
 					effectiveConfigControllerPrototype[statusName] = effectiveConfigControllerPrototype[acessor].methods[statusName];
 				}
 			}
@@ -177,11 +194,15 @@
 				var $location = $injector.get('$location');
 				var currentUrl = $location.url();
 
+				var $routeParams = $injector.get('$routeParams');
+
 				if (typeof self.status !== UNDEFINED) {
+					self.params[self.status] = $routeParams;
 					return;
 				}
 
 				if(typeof effectiveConfig.initialStatus !== UNDEFINED) {
+					self.params[effectiveConfig.initialStatus] = $routeParams;
 					self[effectiveConfig.initialStatus]();
 					return;
 				}
@@ -201,6 +222,7 @@
 						var status = self[acessor].effectiveConfig.status[statusName];			
 						var routeUrl = effectiveConfig.routeBase + status.route;
 						if(path === routeUrl) {
+							self.params[statusName] = $routeParams;
 							self[statusName]();
 							return;
 						}
@@ -223,6 +245,11 @@
 				return self.vars[self.status];
 			}
 
+			function getParamsInjectionMethod() {
+				var self = this;
+				return self.params[self.status];
+			}
+
 			function getTemplateUrlInjectionMethod() {
 				var self = this;
 				return effectiveConfig.templateBaseUrl + evalFunctionOrValue(effectiveConfigStatus[self.status].templateUrl, self);
@@ -243,17 +270,26 @@
 					return df1.promise;
 				}
 
-				var oldStatusName = self.status;
-				if(typeof oldStatusName === UNDEFINED) {
-					oldStatusName = newStatusName;
-				} else if(typeof effectiveConfigStatus[oldStatusName].onExit === FUNCTION) {
-					evalFunctionOrValue(effectiveConfigStatus[oldStatusName].onExit, self);
+				if(typeof self.status === UNDEFINED) {
+					self.status = newStatusName;
+				} else if(typeof effectiveConfigStatus[self.status].onBeforeExit === FUNCTION) {
+					effectiveConfigStatus[self.status].onBeforeExit(self);
+				}
+				
+				if(typeof effectiveConfigStatus[newStatusName].onBeforeEnter === FUNCTION) {
+					effectiveConfigStatus[newStatusName].onBeforeEnter(self);
 				}
 
-				self.status = newStatusName;
+				//self.status = newStatusName;
 
 				var serviceMethod = evalFunctionOrValue(effectiveConfigStatus[newStatusName].serviceMethod);
+				
+				var successFn = (typeof effectiveConfigStatus[newStatusName].success !== UNDEFINED) ? effectiveConfigStatus[newStatusName].success : ServiceSuccessPrototype;  
+				var failFn = (typeof effectiveConfigStatus[newStatusName].fail !== UNDEFINED) ? effectiveConfigStatus[newStatusName].fail : ServiceFailPrototype;
+
 				if(typeof serviceMethod === UNDEFINED) {
+					successFn({data : {}});
+					
 					var df2 = $q.defer();
 					df2.resolve();
 					return df2.promise;
@@ -262,16 +298,14 @@
 				var serviceUrl = (typeof effectiveConfigStatus[newStatusName].serviceUrl !== UNDEFINED) ? 
 						$injector.get('Urls').getBaseUrl() + evalFunctionOrValue(effectiveConfigStatus[newStatusName].serviceUrl, self) : 
 						$injector.get('Urls').serviceUrl();
-				//FIXME Move to getEffectiveStatusSuccessFn and getEffectiveStatusFailFn 
-				var successFn = (typeof effectiveConfigStatus[newStatusName].success !== UNDEFINED) ? effectiveConfigStatus[newStatusName].success : ServiceSuccessPrototype;  
-				var failFn = (typeof effectiveConfigStatus[newStatusName].fail !== UNDEFINED) ? effectiveConfigStatus[newStatusName].fail : ServiceFailPrototype;
 				
 				var loading = evalFunctionOrValue(effectiveConfigStatus[newStatusName].loading, self);
 				$injector.get('Loading').startLoading(loading);
 				return $injector.get('$http')({
 					method: serviceMethod,
-					data: self.model[oldStatusName],
-					url: serviceUrl
+					data: self.model[self.status],
+					url: serviceUrl,
+					//transformResponse: undefined
 				}).then(
 					successFn, 
 					failFn
@@ -291,6 +325,8 @@
 					if(typeof varsOnSuccess !== UNDEFINED) {
 						self.vars[statusOnSuccess] = varsOnSuccess;
 					}
+
+					self.status = newStatusName;
 
 					var statusChanged = (statusOnSuccess !== newStatusName);
 					if(statusChanged) {
@@ -324,10 +360,10 @@
 						self.vars[statusOnFail] = varsOnFail;
 					}
 
-					if((statusOnFail !== oldStatusName) && (statusOnFail !== newStatusName)) {
+					self.status = statusOnFail;
+					
+					if((statusOnFail !== self.status) && (statusOnFail !== newStatusName)) {
 						self[statusOnFail]();
-					} else {
-						self.status = statusOnFail;
 					}
 					var locationOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].locationOnFail, self);
 					var hasLocationOnFail = (typeof locationOnFail !== UNDEFINED);
@@ -445,6 +481,12 @@
 				if (!statusesValue.hasOwnProperty(statusName)) {
 					continue;
 				}
+				
+				
+				if (typeof statusesValue[statusName] === FUNCTION || statusesValue[statusName] instanceof Function) {
+					effectiveStatuses[statusName] = statusesValue[statusName];
+					continue;
+				}
 				effectiveStatuses[statusName] = getEffectiveStatus(statusName, statusesValue[statusName]);
 			}
 			return effectiveStatuses;
@@ -485,15 +527,16 @@
 			effectiveStatus.fail = status.fail;
 			effectiveStatus.statusOnSuccess = getEffectiveStatusStatusOnSuccess(statusName, status);
 			effectiveStatus.statusOnFail = getEffectiveStatusStatusOnFail(statusName, status);
-			effectiveStatus.modelOnSuccess = status.modelOnSuccess;
-			effectiveStatus.modelOnFail = status.modelOnFail;
-			effectiveStatus.varsOnSuccess = status.varsOnSuccess;
-			effectiveStatus.varsOnFail = status.varsOnFail;
+			effectiveStatus.modelOnSuccess = getEffectiveStatusModelOnSuccess(statusName, status);
+			effectiveStatus.modelOnFail = getEffectiveStatusModelOnFail(statusName, status);
+			effectiveStatus.varsOnSuccess = getEffectiveStatusVarsOnSuccess(statusName, status);
+			effectiveStatus.varsOnFail = getEffectiveStatusVarsOnFail(statusName, status);
 			effectiveStatus.locationOnSuccess = status.locationOnSuccess;
 			effectiveStatus.locationOnFail = status.locationOnFail;
 			effectiveStatus.messageOnSuccess = status.messageOnSuccess;
 			effectiveStatus.messageOnFail = status.messageOnFail;
-			effectiveStatus.onExit = status.onExit;
+			effectiveStatus.onBeforeEnter = status.onBeforeEnter;
+			effectiveStatus.onBeforeExit = status.onBeforeExit;
 			return effectiveStatus;
 		}		
 		
@@ -549,15 +592,35 @@
 		}
 		
 		function getEffectiveStatusStatusOnSuccess(statusName, status) {
-			return (typeof status.statusOnSuccess !== UNDEFINED) ?
-				status.statusOnSuccess :
-				statusName;
+			return (typeof status.statusOnSuccess !== UNDEFINED) ? 
+				status.statusOnSuccess : 
+				(typeof status.status !== UNDEFINED) ? 
+					status.status : 
+					statusName;
 		}
 
 		function getEffectiveStatusStatusOnFail(statusName, status) {
-			return (typeof status.statusOnFail !== UNDEFINED) ?
+			return (typeof status.statusOnFail !== UNDEFINED) ? 
 				status.statusOnFail :
-				statusName;
+				(typeof status.status !== UNDEFINED) ? 
+					status.status :
+					statusName;
+		}
+		
+		function getEffectiveStatusModelOnSuccess(statusName, status) {
+			return (typeof status.modelOnSuccess !== UNDEFINED) ? status.modelOnSuccess : status.model;
+		}
+
+		function getEffectiveStatusModelOnFail(statusName, status) {
+			return (typeof status.modelOnFail !== UNDEFINED) ? status.modelOnFail : status.model;
+		}
+
+		function getEffectiveStatusVarsOnSuccess(statusName, status) {
+			return (typeof status.varsOnSuccess !== UNDEFINED) ? status.varsOnSuccess : status.vars;
+		}
+
+		function getEffectiveStatusVarsOnFail(statusName, status) {
+			return (typeof status.varsOnFail !== UNDEFINED) ? status.varsOnFail : status.vars;
 		}
 	}
 
