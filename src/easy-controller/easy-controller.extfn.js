@@ -276,13 +276,30 @@
 					effectiveConfigStatus[self.status].onBeforeExit(self);
 				}
 				
+				if (
+					typeof effectiveConfigStatus[self.status].route !== UNDEFINED && 
+					typeof effectiveConfigStatus[newStatusName].route !== UNDEFINED && 
+					effectiveConfigStatus[self.status].route !== effectiveConfigStatus[newStatusName].route
+				) {
+					var $location = $injector.get('$location');
+
+					var params = {};
+					angular.copy(evalFunctionOrValue(effectiveConfigStatus[newStatusName].routeParams, self), params);
+					$location.path(interpolatePath(effectiveConfig.routeBase + effectiveConfigStatus[newStatusName].route, params));
+					$location.search(params);
+					
+					var rt1 = $q.defer();
+					rt1.resolve();
+					return rt1.promise;
+				} 
+				
 				if(typeof effectiveConfigStatus[newStatusName].onBeforeEnter === FUNCTION) {
 					effectiveConfigStatus[newStatusName].onBeforeEnter(self);
 				}
 
 				//self.status = newStatusName;
 
-				var serviceMethod = evalFunctionOrValue(effectiveConfigStatus[newStatusName].serviceMethod);
+				var serviceMethod = evalFunctionOrValue(effectiveConfigStatus[newStatusName].serviceMethod, self);
 				
 				var successFn = (typeof effectiveConfigStatus[newStatusName].success !== UNDEFINED) ? effectiveConfigStatus[newStatusName].success : ServiceSuccessPrototype;  
 				var failFn = (typeof effectiveConfigStatus[newStatusName].fail !== UNDEFINED) ? effectiveConfigStatus[newStatusName].fail : ServiceFailPrototype;
@@ -290,9 +307,9 @@
 				if(typeof serviceMethod === UNDEFINED) {
 					successFn({data : {}});
 					
-					var df2 = $q.defer();
-					df2.resolve();
-					return df2.promise;
+					var rt2 = $q.defer();
+					rt2.resolve();
+					return rt2.promise;
 				}
 				
 				var serviceUrl = (typeof effectiveConfigStatus[newStatusName].serviceUrl !== UNDEFINED) ? 
@@ -316,12 +333,12 @@
 					var statusOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].statusOnSuccess, self);
 					self.data[statusOnSuccess] = response.data;
 					
-					var modelOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].modelOnSuccess, self);
+					var modelOnSuccess = angular.copy(evalFunctionOrValue(effectiveConfigStatus[newStatusName].modelOnSuccess, self));
 					if(typeof modelOnSuccess !== UNDEFINED) {
 						self.model[statusOnSuccess] = modelOnSuccess;
 					}
 
-					var varsOnSuccess = evalFunctionOrValue(effectiveConfigStatus[newStatusName].varsOnSuccess, self);
+					var varsOnSuccess = angular.copy(evalFunctionOrValue(effectiveConfigStatus[newStatusName].varsOnSuccess, self));
 					if(typeof varsOnSuccess !== UNDEFINED) {
 						self.vars[statusOnSuccess] = varsOnSuccess;
 					}
@@ -350,12 +367,12 @@
 				function ServiceFailPrototype(response) {
 					var statusOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].statusOnFail, self);
 
-					var modelOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].modelOnFail, self);
+					var modelOnFail = angular.copy(evalFunctionOrValue(effectiveConfigStatus[newStatusName].modelOnFail, self));
 					if(typeof modelOnFail !== UNDEFINED) {
 						self.model[statusOnFail] = modelOnFail;
 					}
 
-					var varsOnFail = evalFunctionOrValue(effectiveConfigStatus[newStatusName].varsOnFail, self);
+					var varsOnFail = angular.copy(evalFunctionOrValue(effectiveConfigStatus[newStatusName].varsOnFail, self));
 					if(typeof varsOnFail !== UNDEFINED) {
 						self.vars[statusOnFail] = varsOnFail;
 					}
@@ -519,6 +536,7 @@
 			if(localEffectiveConfig.configureRoutes === true) {
 				effectiveStatus.route = getEffectiveStatusRoute(statusName, status);
 			}
+			effectiveStatus.routeParams = status.routeParams;
 			effectiveStatus.templateUrl = getEffectiveStatusTemplateUrl(statusName, status);
 			effectiveStatus.loading = getEffectiveStatusLoading(statusName, status);
 			effectiveStatus.serviceMethod = getEffectiveStatusServiceMethod(statusName, status);
@@ -776,5 +794,21 @@
 			}			
 		}
 		return false;
+	}
+	
+	function interpolatePath(string, params) {
+		var result = [];
+		angular.forEach((string || '').split(':'), function(segment, i) {
+			if (i === 0) {
+				result.push(segment);
+			} else {
+				var segmentMatch = segment.match(/(\w+)(?:[?*])?(.*)/);
+				var key = segmentMatch[1];
+				result.push(params[key]);
+				result.push(segmentMatch[2] || '');
+				delete params[key];
+			}
+		});
+		return result.join('');
 	}
 })();
