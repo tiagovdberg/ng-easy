@@ -5,7 +5,7 @@ var
 	jshint = require('gulp-jshint'),
 	rename = require('gulp-rename'),
 	tagVersion = require('gulp-tag-version'),
-	uglify = require('gulp-uglify'),
+	uglify = require('gulp-uglify-es').default,
 	yargs = require('yargs');
 
 gulp.task('default', ['build']);
@@ -55,4 +55,3 @@ gulp.task('bump', function () {
 gulp.task('tag', function() {
 	return gulp.src(['package.json']).pipe(tagVersion());
 });
-
