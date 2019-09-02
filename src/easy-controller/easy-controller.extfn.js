@@ -4,16 +4,7 @@
 //TODO InitialStatus has a default if there is only one state.
 
 (function() {
-	//fnVal = (v, self)=>angular.isFunction(v) ? v.apply(self, self) : v;
-	
-	function fnVal(v /*, arguments[1:] */) {
-		if (angular.isFunction(v)) {
-			var extraArgs = Array.prototype.slice.call(arguments, 1);
-			return v.apply(this, extraArgs);
-		}
-		return v;
-	}
-
+	fnVal = function (v, self /*, arguments[1:] */) { return angular.isFunction(v) ? v.apply(self, Array.prototype.slice.call(arguments, 1)) : v; };
 	camelCase = s=>s.substring(0,1).toLowerCase() + s.substring(1);
 	hyphenCase = s=>s.split('').map((c,i)=>(l = c.toLowerCase()) !== c && i > 0 ? '-' + l : l).join('');
 	ctrlFeature = s=>camelCase(trimSuffix(s, 'Controller'));
