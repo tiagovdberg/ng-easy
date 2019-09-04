@@ -10,8 +10,8 @@
 	trimPrefix = (s, prefix)=>s.startsWith(prefix) ? s.substring(prefix.length) : s; 
 	trimSuffix = (s, suffix)=>s.endsWith(suffix) ? s.substring(0, s.length - suffix.length) : s;
 	trimPrefixes = (s, prefixes)=>{
-		for(var x = 0; x < prefixes.length; x++) {
-			if( (ts = trimPrefix(s, prefixes[x])) !== s) return ts;
+		for(var pl = 0; pl < prefixes.length; pl++) {
+			if( (ts = trimPrefix(s, prefixes[pl])) !== s) return ts;
 		}
 		return s;
 	};
@@ -30,10 +30,9 @@
 		.config(['$controllerProvider', '$routeProvider', function($controllerProvider, $routeProvider) {
 			$controllerProvider.register(config.name, ['$location', '$route', '$routeParams', '$q', '$http', '$' + ctrlFeature(config.name) + 'StateService', function($location, $route, $routeParams, $q, $http, $stateService) {
 				var self = this;
-				self.model = ()=>self[self.$status].model;
 				self.data = ()=>self[self.$status].data;
+				self.model = ()=>self[self.$status].model;
 				self.vars = ()=>self[self.$status].vars;
-				self.params = ()=>self[self.$status].params;
 				self.templateUrl = ()=>((t = fnVal(config.templateUrl, self)) ? t : hyphenCase(module) + '/' + hyphenCase(ctrlFeature(config.name))) + ((st = fnVal(config.status[self.$status].templateUrl, self)) ? st : '/' + hyphenCase(trimPrefixes(self.$status, ['put', 'get', 'post', 'delete'])) + '.html');
 				self.status = status;
 				
@@ -41,10 +40,9 @@
 				delete self.$status;
 				angular.forEach(config.status, (stConfig, st)=>{
 					self[st] = angular.isFunction(stConfig) ? stConfig : angular.bind(self, status, st);
-					self[st].model = {};
 					self[st].data = {};
+					self[st].model = {};
 					self[st].vars = {};
-					self[st].params = {};
 				});
 				for (var st in config.status) { 
 					if (!config.status.hasOwnProperty(st)) continue;
@@ -64,12 +62,19 @@
 						return self.$status;
 					}
 					
-					//Messages.clearMessages();
-					//if (angular.isDefined(form) && Messages.formErrors(self.getTemplateUrl(), form)) return $q.resolve({data : {}});
-					
 					if(angular.isUndefined(self.$status)) {
 						self.$status = st;
 					}
+					
+					var doContinue = true;
+					if(angular.isFunction(config.status[st].before)) {
+						if(config.status[st].before(self) === false) {
+							return $q.resolve({data : {}});
+						}
+					}
+					//Messages.clearMessages();
+					//if (angular.isDefined(form) && Messages.formErrors(self.getTemplateUrl(), form)) return $q.resolve({data : {}});
+					
 					var cr = ctrlRoute(st);
 					if (angular.isDefined(cr) && $route.current.originalPath !== cr) { 
 						var params = angular.copy(fnVal(config.status[st].routeParams, self), {});
@@ -84,6 +89,10 @@
 						return $q.resolve({data : {}}, (fn = config.status[st].success) ? angular.bind(self, fn, self) : angular.bind(self, success, self) );
 					}
 					
+					if(method !== 'GET' &&angular.isDefined(cr) && $route.current.originalPath === cr) {
+						return $q.reject("Will not call a " + method + " method directly from a route.").catch(reason=>console.error(reason));
+					}
+					
 					return $http({
 						method: method,
 						data: self.model(),
@@ -93,13 +102,18 @@
 						(fn = config.status[st].fail) ? angular.bind(self, fn, self) : angular.bind(self, fail, self)
 					);
 		
-					//TODO model and data must accept functions with response as argument.
 					function success(self, response) {
 						var newStatus = fnVal(config.status[st].statusOnSuccess, self) || fnVal(config.status[st].status, self) || st;
 						
 						self[newStatus].data = response.data;
-						angular.copy(fnVal(config.status[self.$status].modelOnSuccess, self) || fnVal(config.status[self.$status].model, self), self[newStatus].model);
-						angular.copy(fnVal(config.status[self.$status].varsOnSuccess, self) || fnVal(config.status[self.$status].vars, self), self[newStatus].vars);
+						var newModel = fnVal(config.status[self.$status].modelOnSuccess, self) || fnVal(config.status[self.$status].model, self);
+						var newVars = fnVal(config.status[self.$status].varsOnSuccess, self) || fnVal(config.status[self.$status].vars, self);
+						if (newModel !== self[newStatus].model) {
+							angular.copy(newModel, self[newStatus].model);
+						}
+						if (newVars !== self[newStatus].vars) {
+							angular.copy(newVars, self[newStatus].vars);
+						}
 
 						var changed = newStatus !== st;
 						self.$status = newStatus;
@@ -112,8 +126,14 @@
 						var newStatus = fnVal(config.status[st].statusOnFail, self) || fnVal(config.status[st].status, self) || st;
 		
 						self[newStatus].data = response.data;
-						angular.copy(fnVal(config.status[self.$status].modelOnFail, self) || fnVal(config.status[self.$status].model, self), self[newStatus].model);
-						angular.copy(fnVal(config.status[self.$status].varsOnFail, self) || fnVal(config.status[self.$status].vars, self), self[newStatus].vars);
+						var newModel = fnVal(config.status[self.$status].modelOnFail, self) || fnVal(config.status[self.$status].model, self);
+						var newVars = fnVal(config.status[self.$status].varsOnFail, self) || fnVal(config.status[self.$status].vars, self);
+						if (newModel !== self[newStatus].model) {
+							angular.copy(newModel, self[newStatus].model);
+						}
+						if (newVars !== self[newStatus].vars) {
+							angular.copy(newVars, self[newStatus].vars);
+						}
 		
 						var changed = newStatus !== st;
 						self.$status = newStatus;
