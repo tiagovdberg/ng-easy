@@ -90,12 +90,8 @@
 						transition = config.status[self.$status].to[st] || config.status[self.$status].to["*"] || {};
 					}
 
-					var args = Array.prototype.slice.call(arguments, 1);
+					var args = Array.prototype.slice.call(arguments, 2);
 					var fnValArgs = [self].concat(args);
-
-					if(angular.isFunction(config.status[st].before) && config.status[st].before.apply(self, fnValArgs) === false) {
-						return $q.resolve({data : {}});
-					}
 					
 					var cr = ctrlRoute(st);
 					if (angular.isDefined(cr) && $route.current.originalPath !== cr) { 
