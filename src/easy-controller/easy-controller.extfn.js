@@ -1,6 +1,17 @@
 /*jshint esversion: 6 */
 //TODO Documentation JSDoc
 (function() {
+	var interruptedPromise = {
+		then : ()=>{},
+		catch : ()=>{},
+		finally : ()=>{},
+		defer : ()=>{},
+		when : ()=>{},
+		resolve : ()=>{},
+		reject : ()=>{},
+		all : ()=>{},
+		race : ()=>{}
+	};
 	var fnVal = (v, self, args)=>angular.isFunction(v) ? v.apply(self, args) : v; 
 	var bindSuffixed = (self, originalFunction, args)=>(...fnArgs)=>originalFunction.apply(self, Array.prototype.slice.call(fnArgs).concat(args));
 	var camelCase = s=>s.substring(0,1).toLowerCase() + s.substring(1);
@@ -15,7 +26,7 @@
 	};
 
 	angular.easy.registerFunction('easyController', function (module, config) {
-		ctrlFeature = s=>camelCase(trimSuffix(s, 'Controller'));
+		var ctrlFeature = s=>camelCase(trimSuffix(s, 'Controller'));
 		
 		angular.module(module)
 		.service('$' + ctrlFeature(config.name) + 'StateService', function() {
@@ -35,17 +46,16 @@
 				self.model = ()=>self[self.$status].model;
 				self.vars = ()=>self[self.$status].vars;
 				self.params = ()=>self[self.$status].params;
-				self.templateUrl = ()=>((t = fnVal(config.templateUrl, self, [self])) ? t : hyphenCase(module) + '/' + hyphenCase(ctrlFeature(config.name))) + ((st = fnVal(config.status[self.$status].templateUrl, self, [self])) ? st : '/' + hyphenCase(trimPrefixes(self.$status, ['put', 'get', 'post', 'delete'])) + '.html');
-				self.status = status;
+				self.templateUrl = ()=>((t = fnVal(config.template, self, [self])) ? t : hyphenCase(module) + '/' + hyphenCase(ctrlFeature(config.name))) + ((st = fnVal(config.status[self.$status].template, self, [self])) ? st : '/' + hyphenCase(trimPrefixes(self.$status, ['put', 'get', 'post', 'delete'])) + '.html');
+				self.status = angular.bind(self, status, self);
 				
 				function ctrlRoute(st) {
 					return angular.isDefined(config.status[st].route) ? ( ((r = fnVal(config.route, self, [self])) ? r : hyphenCase(ctrlFeature(config.name))) + fnVal(config.status[st].route, self, [self]) ) : undefined;
 				}
 
-				//init()
 				delete self.$status;
 				angular.forEach(config.status, (stConfig, st)=>{
-					self[st] = angular.isFunction(stConfig) ? stConfig : angular.bind(self, status, st);
+					self[st] = angular.isFunction(stConfig) ? angular.bind(self, stConfig, self, st) : angular.bind(self, self.status, st);
 					self[st].data = {};
 					self[st].model = {};
 					self[st].vars = {};
@@ -62,42 +72,42 @@
 						angular.copy(oldCtrl.vars(), self[self.$status].vars);
 						angular.copy(oldCtrl.params(), self[self.$status].params);
 					}
+					if(angular.isUndefined(self.$status)) {
+						self.$status = st;
+					}
 					angular.copy($routeParams, self[st].params);
 					self[st].apply(self, args);
 					return;
 				}					
 				
-				function status(st /*, arguments[1:] */) {
+				function status(self, st /*, arguments[1:] */) {
 					if(angular.isUndefined(st)) {
 						return self.$status;
 					}
 					
-					if(angular.isUndefined(self.$status)) {
-						self.$status = st;
+					var transition = {};
+					if (angular.isDefined(config.status[self.$status].to)) {
+						transition = config.status[self.$status].to[st] || config.status[self.$status].to["*"] || {};
 					}
 
 					var args = Array.prototype.slice.call(arguments, 1);
 					var fnValArgs = [self].concat(args);
 
-					if(angular.isFunction(config.status[st].before)) {
-						if(config.status[st].before.apply(self, fnValArgs) === false) {
-							return $q.resolve({data : {}});
-						}
+					if(angular.isFunction(config.status[st].before) && config.status[st].before.apply(self, fnValArgs) === false) {
+						return $q.resolve({data : {}});
 					}
-					//Messages.clearMessages();
-					//if (angular.isDefined(form) && Messages.formErrors(self.getTemplateUrl(), form)) return $q.resolve({data : {}});
 					
 					var cr = ctrlRoute(st);
 					if (angular.isDefined(cr) && $route.current.originalPath !== cr) { 
-						var params = angular.copy(fnVal(config.status[st].routeParams, self, fnValArgs), {});
 						$stateService.save(self);
 						$stateService.saveArgs(args);
+						var params = angular.copy(fnVal(transition.routeParams, self, fnValArgs), {}); //TODO
 						$location.path(interpolatePath(cr, params));
 						$location.search(params);
-						return $q.resolve({data : {}});
+						return interruptedPromise;
 					} 
 		
-					var method = (a = ['PUT','GET','DELETE','POST'].filter(m=>st.toUpperCase().startsWith(m))).length === 1 ? a[0] : false; 
+					var method = fnVal(config.status[st].method, self, fnValArgs) || ((a = ['PUT','GET','DELETE','POST'].filter(m=>st.toUpperCase().startsWith(m))).length === 1 ? a[0] : false); 
 					if(!method) {
 						return $q.resolve({data : {}}, bindSuffixed(self, config.status[st].success ||  success, fnValArgs));
 					}
@@ -109,25 +119,22 @@
 					return $http({
 						method: method,
 						data: self.model(),
-						url: fnVal(config.status[st].serviceUrl, self, fnValArgs) || '/api' + $location.url()
+						url: fnVal(config.status[st].url, self, fnValArgs) || '/api' + $location.url()
 					}).then(
-						bindSuffixed(self, config.status[st].success || success, fnValArgs), 
-						bindSuffixed(self, config.status[st].fail || fail, fnValArgs)
-					).then(
-						bindSuffixed(self, config.status[st].afterSuccess || config.status[st].after || angular.noop, fnValArgs),
-						bindSuffixed(self, config.status[st].afterFail || config.status[st].after || angular.noop, fnValArgs)
+						bindSuffixed(self, success, fnValArgs), 
+						bindSuffixed(self, fail, fnValArgs)
 					);
 		
 					function success(response) {
 						var newStatus = fnVal(config.status[st].statusOnSuccess, self, fnValArgs) || fnVal(config.status[st].status, self, fnValArgs) || st;
 						
 						self[newStatus].data = response.data;
-						var newModel = fnVal(config.status[self.$status].modelOnSuccess, self, fnValArgs) || fnVal(config.status[self.$status].model, self, fnValArgs);
-						var newVars = fnVal(config.status[self.$status].varsOnSuccess, self, fnValArgs) || fnVal(config.status[self.$status].vars, self, fnValArgs);
-						if (newModel !== self[newStatus].model) {
+						var newModel = fnVal(transition.modelOnSuccess, self, fnValArgs) || fnVal(transition.model, self, fnValArgs);
+						var newVars = fnVal(transition.varsOnSuccess, self, fnValArgs) || fnVal(transition.vars, self, fnValArgs);
+						if (angular.isDefined(newModel) && newModel !== self[newStatus].model) {
 							angular.copy(newModel, self[newStatus].model);
 						}
-						if (newVars !== self[newStatus].vars) {
+						if (angular.isDefined(newVars) && newVars !== self[newStatus].vars) {
 							angular.copy(newVars, self[newStatus].vars);
 						}
 
@@ -142,12 +149,12 @@
 						var newStatus = fnVal(config.status[st].statusOnFail, self, fnValArgs) || fnVal(config.status[st].status, self, fnValArgs) || st;
 		
 						self[newStatus].data = response.data;
-						var newModel = fnVal(config.status[self.$status].modelOnFail, self, fnValArgs) || fnVal(config.status[self.$status].model, self, fnValArgs);
-						var newVars = fnVal(config.status[self.$status].varsOnFail, self, fnValArgs) || fnVal(config.status[self.$status].vars, self, fnValArgs);
-						if (newModel !== self[newStatus].model) {
+						var newModel = fnVal(transition.modelOnFail, self, fnValArgs) || fnVal(transition.model, self, fnValArgs);
+						var newVars = fnVal(transition.varsOnFail, self, fnValArgs) || fnVal(transition.vars, self, fnValArgs);
+						if (angular.isDefined(newModel) && newModel !== self[newStatus].model) {
 							angular.copy(newModel, self[newStatus].model);
 						}
-						if (newVars !== self[newStatus].vars) {
+						if (angular.isDefined(newVars) && newVars !== self[newStatus].vars) {
 							angular.copy(newVars, self[newStatus].vars);
 						}
 		
@@ -156,11 +163,6 @@
 						if(changed) {
 							self[newStatus]();
 						}
-		//				Messages.handleErrors(response);
-		//				var messageOnFail = fnVal(effectiveConfigStatus[newStatusName].messageOnFail, self);
-		//				if(messageOnFail) {
-		//					Messages.addMessage(messageOnFail);
-		//				}
 						throw response;
 					}
 				}
